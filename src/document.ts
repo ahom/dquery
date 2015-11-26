@@ -25,10 +25,10 @@ class Path implements Serializable {
         let this_comps = this.split();
         let other_comps = other_path.split();
 
-        if (this_comps.length > other_comps.length) {
+        if (this_comps.length < other_comps.length) {
             return false;
         } else {
-            return this_comps.every((el, idx) => el === other_comps[idx]);
+            return other_comps.every((el, idx) => el === this_comps[idx]);
         }
     }
 }
