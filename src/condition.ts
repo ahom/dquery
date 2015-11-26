@@ -1,20 +1,20 @@
-import {Serializable, SerializationManager, register_serial} from './serial';
-import {Expression, expr_serialization_manager} from './expression';
+/// <reference path="./serial.ts" />
+/// <reference path="./expression.ts" />
 
-export enum ConditionType {
+enum ConditionType {
     binary_expr,
     nary_cond
 };
 
-export abstract class Condition implements Serializable {
+abstract class Condition implements Serializable {
     constructor(public type : ConditionType) {
     }
     abstract serialize() : any;
 }
 
-export let cond_serialization_manager = new SerializationManager<Condition>();
+let cond_serialization_manager = new SerializationManager<Condition>();
 
-export enum BinaryExprCondOperator {
+enum BinaryExprCondOperator {
     gt,
     gte,
     lt,
@@ -26,7 +26,7 @@ export enum BinaryExprCondOperator {
 @register_serial("cond:binary_expr", "1", cond_serialization_manager, {
     1: BinaryExprCond.Deserialize
 })
-export class BinaryExprCond extends Condition {
+class BinaryExprCond extends Condition {
     constructor(public lhe : Expression, public op : BinaryExprCondOperator, public rhe : Expression) {
         super(ConditionType.binary_expr);
     }
@@ -48,7 +48,7 @@ export class BinaryExprCond extends Condition {
     }
 }
 
-export enum NaryCondCondOperator {
+enum NaryCondCondOperator {
     and,
     or
 };
@@ -56,7 +56,7 @@ export enum NaryCondCondOperator {
 @register_serial("cond:nary_cond", "1", cond_serialization_manager, {
     1: NaryCondCond.Deserialize
 })
-export class NaryCondCond extends Condition {
+class NaryCondCond extends Condition {
     constructor(public op : NaryCondCondOperator, public conds : Array<Condition> = []) {
         super(ConditionType.nary_cond);
     }

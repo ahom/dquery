@@ -1,6 +1,4 @@
-// TODO: nice error handling
-
-export function register_serial<T>(
+function register_serial<T>(
         name : string, 
         version : string,
         manager? : SerializationManager<T>, 
@@ -27,11 +25,11 @@ export function register_serial<T>(
     }
 }
 
-export interface Serializable {
+interface Serializable {
     serialize() : any;
 }
 
-export class SerializationManager<T> {
+class SerializationManager<T> {
     constructor(public map : { [name : string] : { [version : string] : (input : any) => T } } = {}) {
     }
 

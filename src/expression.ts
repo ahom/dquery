@@ -1,23 +1,23 @@
-import {Serializable, SerializationManager, register_serial} from './serial';
-import {Path} from './document';
+/// <reference path="./serial.ts" />
+/// <reference path="./document.ts" />
 
-export enum ExpressionType {
+enum ExpressionType {
     value,
     path
 };
 
-export abstract class Expression implements Serializable {
+abstract class Expression implements Serializable {
     constructor(public type : ExpressionType) {
     }
     abstract serialize() : any;
 }
 
-export let expr_serialization_manager = new SerializationManager<Expression>();
+let expr_serialization_manager = new SerializationManager<Expression>();
 
 @register_serial("expr:value", "1", expr_serialization_manager, {
     1: ValueExpr.Deserialize
 })
-export class ValueExpr extends Expression {
+class ValueExpr extends Expression {
     constructor(public value : any) {
         super(ExpressionType.value);
     }
@@ -36,7 +36,7 @@ export class ValueExpr extends Expression {
 @register_serial("expr:path", "1", expr_serialization_manager, {
     1: PathExpr.Deserialize
 })
-export class PathExpr extends Expression {
+class PathExpr extends Expression {
     constructor(public path : Path) {
         super(ExpressionType.path);
     }

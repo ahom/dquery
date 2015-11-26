@@ -1,14 +1,14 @@
-import {Path} from './document';
-import {Expression, ValueExpr, PathExpr} from './expression';
-import {Condition, BinaryExprCond, BinaryExprCondOperator, NaryCondCond} from './condition';
-import {Operation, MapOp} from './operation';
-import {Query} from './query';
+/// <reference path="./document.ts" />
+/// <reference path="./expression.ts" />
+/// <reference path="./condition.ts" />
+/// <reference path="./operation.ts" />
+/// <reference path="./query.ts" />
 
-export function p(path : string) : Path {
+function p(path : string) : Path {
     return new Path(path);
 }
 
-export class QueryBuilder {
+class QueryBuilder {
     query : Query;
 
     map(mapping : any) : QueryBuilder {
@@ -38,7 +38,7 @@ function CoerceToExpression(expr : ExpressionLike) : Expression {
     throw new Error("Can't build an Expression from: " + JSON.stringify(expr));
 }
 
-export class ExpressionBuilder {
+class ExpressionBuilder {
     public lhe : Expression;
     constructor(lhe_like : ExpressionLike) {
         this.lhe = CoerceToExpression(lhe_like);

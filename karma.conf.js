@@ -5,7 +5,7 @@ module.exports = function(config) {
   config.set({
 
     // base path that will be used to resolve all patterns (eg. files, exclude)
-    basePath: '',
+    basePath: '.',
 
 
     // frameworks to use
@@ -15,7 +15,7 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      'test/**/*.js'
+      'test/build/*.js'
     ],
 
 
@@ -23,31 +23,10 @@ module.exports = function(config) {
     exclude: [
     ],
 
-
-    // preprocess matching files before serving them to the browser
-    // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
-    preprocessors: {
-        '**/*.ts': ['typescript']
-    },
-
-    typescriptPreprocessor: {
-        options: {
-            sourceMap: true,
-            target: 'ES5',
-            module: 'system',
-            concatenateOutput: false
-        },
-        typings: [
-            'typings/tsd.d.ts',
-            'typings/jasmine/jasmine.d.ts'
-        ]
-    },
-
     // test results reporter to use
     // possible values: 'dots', 'progress'
     // available reporters: https://npmjs.org/browse/keyword/karma-reporter
     reporters: ['progress'],
-
 
     // web server port
     port: 9876,
@@ -73,7 +52,7 @@ module.exports = function(config) {
 
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
-    singleRun: false,
+    singleRun: true,
 
     // Concurrency level
     // how many browser should be started simultanous

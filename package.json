@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "description": "document query",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "keywords": [
     "docstore",
     "document",
@@ -18,7 +15,16 @@
     "karma": "^0.13.15",
     "karma-chrome-launcher": "^0.2.1",
     "karma-jasmine": "^0.3.6",
-    "karma-typescript-preprocessor": "0.0.21",
-    "tsd": "^0.6.5"
+    "tsd": "^0.6.5",
+    "typescript": "^1.6.2"
+  },
+  "scripts": {
+    "postinstall": "tsd install",
+    "install:clean": "rm -fr node_modules typings",
+    "build": "cd src && tsc",
+    "build:clean": "rm -fr src/build",
+    "test:build": "cd test && tsc",
+    "test": "npm run test:clean && npm run test:build && karma start",
+    "test:clean": "rm -fr test/build"
   }
 }

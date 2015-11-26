@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "listFiles": true,
+        "noImplicitAny": false,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "outFile": "build/tests.js",
+        "sourceMap": true,
+        "target": "ES5",
+        "experimentalDecorators": true
+    }
+}

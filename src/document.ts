@@ -1,6 +1,6 @@
-import {Serializable} from './serial';
+/// <reference path="./serial.ts" />
 
-export class Path implements Serializable {
+class Path implements Serializable {
     constructor(public raw : string = "") {
     }
 
