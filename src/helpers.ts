@@ -32,12 +32,11 @@ function CoerceToValue(val : any) : Value {
     if (val instanceof Date 
             || typeof val === 'string' 
             || typeof val === 'boolean'  
-            || typeof val === 'number') {
-        if (this.val === this.val // test for NaN
+            || typeof val === 'number'
+            && ( this.val === this.val // test for NaN
                 && this.val !== Infinity
-                && this.val !== -Infinity) {
-            return new Value(val);
-        }
+                && this.val !== -Infinity )) {
+        return new Value(val);
     }
     throw new CoercionError("Can't build a Value from: " + JSON.stringify(val)); 
 }
