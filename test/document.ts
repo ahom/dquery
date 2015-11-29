@@ -15,6 +15,7 @@ describe('Path', () => {
         expect(p('a.long.path').starts_with(p('a'))).toBeTruthy();
         expect(p('a.long.path').starts_with(p('a.long.path'))).toBeTruthy();
         expect(p('a.long.path').starts_with(p('b'))).toBeFalsy();
+        expect(p('a.long.path').starts_with(p('a.long.path.really'))).toBeFalsy();
     });
 });
 

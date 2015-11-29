@@ -1,9 +1,14 @@
-/// <reference path="./serial.ts" />
 /// <reference path="./operation.ts" />
 
-let query_serialization_manager = new SerializationManager<Query>();
+function deserialize_query(input : any) : Query {
+    let deserialized_any = serialization_manager.deserialize_any(input);
+    if (deserialized_any instanceof Query) {
+        return deserialized_any;
+    }
+    throw new Error("Can't deserialize Query from: " + JSON.stringify(deserialized_any));
+}
 
-@register_serial("query", "1", query_serialization_manager, {
+@register_serial("query", "1", {
     1: Query.Deserialize
 })
 class Query implements Serializable {
@@ -17,7 +22,7 @@ class Query implements Serializable {
     }
     
     static Deserialize(input : any) : Query {
-        return new Query(input.ops.map((op) => op_serialization_manager.deserialize(op)));
+        return new Query(input.ops.map((op) => deserialize_op(op)));
     }
 }
 

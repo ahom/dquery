@@ -17,8 +17,7 @@ class Path implements Serializable {
     }
 
     append(other_path : Path) : Path {
-        this.raw += "." + other_path.raw
-        return this;
+        return new Path(this.raw + (this.raw.length > 0 ? "." : "") + other_path.raw);
     }
 
     starts_with(other_path : Path) : boolean {

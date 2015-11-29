@@ -18,7 +18,7 @@ gt(e)
 lt(e)
 (n)eq
 (n)in
-regex
+like
 and
 or
 not
@@ -45,9 +45,6 @@ plus
 minus
 divide
 multiply
-sum
-avg
-count
 for_each
 ```
 
@@ -57,6 +54,8 @@ for_each
 sum
 avg
 count
+min
+max
 ```
 
 ## Path
@@ -65,6 +64,4 @@ count
 append
 starts_with
 split
-head
-tail
 ```

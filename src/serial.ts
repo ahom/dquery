@@ -1,8 +1,12 @@
-function register_serial<T>(
+let serialization_manager = new SerializationManager();
+
+type VersionMapping = { [version : string] : (input : any) => any };
+type TypeVersionMapping = { [name : string] : VersionMapping };
+
+function register_serial(
         name : string, 
         version : string,
-        manager? : SerializationManager<T>, 
-        deserialize_funcs? : { [version : string] : (input : any) => T }) {
+        deserialize_funcs : VersionMapping) {
     return function (target : Function) : any {
         let registered = function (...args) {
             target.apply(this, args);
@@ -17,10 +21,7 @@ function register_serial<T>(
                 value: old_serialize.apply(this)
             }
         }
-
-        if (manager) {
-            manager.register(name, deserialize_funcs);
-        }
+        serialization_manager.register(name, deserialize_funcs);
         return registered;
     }
 }
@@ -29,15 +30,15 @@ interface Serializable {
     serialize() : any;
 }
 
-class SerializationManager<T> {
-    constructor(public map : { [name : string] : { [version : string] : (input : any) => T } } = {}) {
+class SerializationManager {
+    constructor(public map : TypeVersionMapping = {}) {
     }
 
-    register(name: string, deserialize_funcs : { [version : string] : (input : any) => T }) {
+    register(name: string, deserialize_funcs : VersionMapping) {
         this.map[name] = deserialize_funcs;
     }
 
-    deserialize(input : any) : T {
+    deserialize_any(input : any) : any {
         return this.map[input.type][input.version](input.value);
     }
 }
