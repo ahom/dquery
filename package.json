@@ -26,6 +26,7 @@
     "build:clean": "rm -fr src/build",
     "test:build": "cd test && tsc",
     "test": "npm run test:clean && npm run test:build && karma start",
-    "test:clean": "rm -fr test/build"
+    "test:clean": "rm -fr test/build",
+    "all:clean": "npm run test:clean && npm run build:clean && npm run install:clean"
   }
 }
