@@ -74,8 +74,8 @@ class MapOpMapping extends Mapping {
         super(mapop_mapping, is_map_op_leaf);
     }
 
-    static Deserialize(input : any) {
-        return Mapping.Deserialize(input, is_map_op_leaf);
+    static Deserialize(input : any) : MapOpMapping {
+        return new MapOpMapping(Mapping.Deserialize(input, is_map_op_leaf).map);
     }
 }
 
@@ -88,9 +88,7 @@ class MapOp extends Operation {
     }
 
     serialize() : any {
-        return {
-            map: this.map.serialize()
-        };
+        return this.map.serialize();
     }
 
     static Deserialize(input : any) : MapOp {
@@ -107,13 +105,11 @@ class FilterOp extends Operation {
     }
 
     serialize() : any {
-        return {
-            cond: this.cond.serialize()
-        };
+        return this.cond.serialize();
     }
 
     static Deserialize(input : any) : FilterOp {
-        return new FilterOp(deserialize_cond(input.cond));
+        return new FilterOp(deserialize_cond(input));
     }
 }
 
@@ -126,13 +122,11 @@ class ConcatOp extends Operation {
     }
 
     serialize() : any {
-        return {
-            paths: this.paths.map((path) => path.serialize())
-        };
+        return this.paths.map((path) => path.serialize());
     }
 
     static Deserialize(input : any) : ConcatOp {
-        return new ConcatOp(input.paths.map((path) => Path.Deserialize(path)));
+        return new ConcatOp(input.map((path) => Path.Deserialize(path)));
     }
 }
 
@@ -173,13 +167,13 @@ class ReduceOpKeysMapping extends Mapping {
         super(keys_mapping, is_reduce_op_keys_leaf);
     }
 
-    static Deserialize(input : any) {
-        return Mapping.Deserialize(input, is_reduce_op_keys_leaf);
+    static Deserialize(input : any) : ReduceOpKeysMapping {
+        return new ReduceOpKeysMapping(Mapping.Deserialize(input, is_reduce_op_keys_leaf).map);
     }
 }
 
 function is_reduce_op_values_leaf(input : any) : boolean {
-    return input instanceof Expression;
+    return input instanceof Reducer;
 }
 
 class ReduceOpValuesMapping extends Mapping {
@@ -187,8 +181,8 @@ class ReduceOpValuesMapping extends Mapping {
         super(values_mapping, is_reduce_op_values_leaf);
     }
 
-    static Deserialize(input : any) {
-        return Mapping.Deserialize(input, is_reduce_op_values_leaf);
+    static Deserialize(input : any) : ReduceOpValuesMapping {
+        return new ReduceOpValuesMapping(Mapping.Deserialize(input, is_reduce_op_values_leaf).map);
     }
 }
 

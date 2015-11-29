@@ -72,14 +72,14 @@ class NaryCondCond extends Condition {
 
     serialize() : any {
         return {
-            type: NaryCondCondOperator[this.type],
+            op: NaryCondCondOperator[this.op],
             conds: this.conds.map((cond) => cond.serialize())
         }
     }
 
     static Deserialize(input : any) : NaryCondCond {
         return new NaryCondCond(
-            NaryCondCondOperator[<string>input.type],
+            NaryCondCondOperator[<string>input.op],
             input.conds.map((cond) => deserialize_cond(cond))
         ); 
     }
@@ -125,7 +125,7 @@ class ListCond extends Condition {
         return {
             path: this.path.serialize(),
             op: ListCondOperator[this.op],
-            values: this.values
+            values: this.values.map((val) => val.serialize())
         }
     }
 
@@ -133,7 +133,7 @@ class ListCond extends Condition {
         return new ListCond(
             Path.Deserialize(input.path),
             ListCondOperator[<string>input.op],
-            input.values
+            input.values.map((val) => Value.Deserialize(val))
         );
     }
 }
@@ -147,15 +147,11 @@ class ExistsCond extends Condition {
     }
 
     serialize() : any {
-        return {
-            path: this.path.serialize()
-        }
+        return this.path.serialize();
     }
 
     static Deserialize(input : any) : ExistsCond {
-        return new ExistsCond(
-            Path.Deserialize(input.path)
-        );
+        return new ExistsCond(Path.Deserialize(input));
     }
 }
 

@@ -1,11 +1,11 @@
 /// <reference path="../typings/tsd.d.ts" />
 /// <reference path="../src/path.ts" />
 
-function p(path : string) : Path {
-    return new Path(path);
-}
-
 describe('path', () => {
+    let p = function (path : string) : Path {
+        return new Path(path);
+    };
+
     it('should be appendable', () => {
         expect(p('my.path').append(p('appended'))).toEqual(p('my.path.appended'));
     });

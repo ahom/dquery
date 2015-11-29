@@ -16,13 +16,11 @@ class Query implements Serializable {
     }
 
     serialize() : any {
-        return {
-            ops: this.ops.map((op) => op.serialize())
-        }
+        return this.ops.map((op) => op.serialize());
     }
     
     static Deserialize(input : any) : Query {
-        return new Query(input.ops.map((op) => deserialize_op(op)));
+        return new Query(input.map((op) => deserialize_op(op)));
     }
 }
 

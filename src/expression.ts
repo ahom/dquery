@@ -33,13 +33,11 @@ class ValueExpr extends Expression {
     }
 
     serialize() : any {
-        return {
-            value: this.value
-        }
+        return this.value.serialize();
     }
 
     static Deserialize(input : any) : ValueExpr {
-        return new ValueExpr(input.value);
+        return new ValueExpr(Value.Deserialize(input));
     }
 }
 
@@ -52,15 +50,11 @@ class PathExpr extends Expression {
     }
 
     serialize() : any {
-        return {
-            path: this.path.serialize()
-        }
+        return this.path.serialize();
     }
 
     static Deserialize(input : any) : PathExpr {
-        return new PathExpr(
-            Path.Deserialize(input.path)
-        );
+        return new PathExpr(Path.Deserialize(input));
     }
 }
 
@@ -106,7 +100,7 @@ function deserialize_array_expr(input : any) : ArrayExpr {
     throw new Error("Can't deserialize ArrayExpr from: " + JSON.stringify(deserialized_any));
 }
 
-@register_serial("expr:array_expr", "1", {
+@register_serial("expr:array", "1", {
     1: ArrayExpr.Deserialize
 })
 class ArrayExpr implements Serializable {

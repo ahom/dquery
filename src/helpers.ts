@@ -29,8 +29,15 @@ function CoerceToPath(path : any) : Path {
 }
 
 function CoerceToValue(val : any) : Value {
-    if (val instanceof Date || typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean')  {
-        return val;
+    if (val instanceof Date 
+            || typeof val === 'string' 
+            || typeof val === 'boolean'  
+            || typeof val === 'number') {
+        if (this.val === this.val // test for NaN
+                && this.val !== Infinity
+                && this.val !== -Infinity) {
+            return new Value(val);
+        }
     }
     throw new CoercionError("Can't build a Value from: " + JSON.stringify(val)); 
 }
@@ -57,7 +64,7 @@ function CoerceToExpression(expr : any) : Expression {
             }
         case "number":
         case "boolean":
-            return new ValueExpr(<number|boolean>expr);
+            return new ValueExpr(CoerceToValue(expr));
     }
     throw new CoercionError("Can't build an Expression from: " + JSON.stringify(expr));
 }

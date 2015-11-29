@@ -14,7 +14,8 @@ class SerializationManager {
     }
 
     deserialize_any(input : any) : any {
-        return this.map[input.type][input.version](input.value);
+        let obj = JSON.parse(input);
+        return this.map[obj.type][obj.version](obj.value);
     }
 }
 
@@ -31,12 +32,12 @@ function register_serial(
         registered.prototype = target.prototype;
 
         let old_serialize = registered.prototype.serialize;
-        registered.prototype.serialize = function () : any {
-            return {
+        registered.prototype.serialize = function () : string {
+            return JSON.stringify({
                 type: name,
                 version: version,
                 value: old_serialize.apply(this)
-            }
+            });
         }
         serialization_manager.register(name, deserialize_funcs);
         return registered;
