@@ -318,7 +318,10 @@ for (let it = 0; RangeOpOperator[it] !== undefined; it++) {
     let op = RangeOpOperator[it];
     QueryBuilder.prototype[op] = function (index : number) {
         return function (val : any) : QueryBuilder {
-            if (typeof val === 'number') {
+            if (typeof val === 'number'
+                    && val === val // NaN
+                    && val !== Infinity
+                    && val !== -Infinity) {
                 this.query.ops.push(new RangeOp(index, val));
                 return this;
             }
