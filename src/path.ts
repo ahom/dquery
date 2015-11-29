@@ -13,7 +13,7 @@ class Path implements Serializable {
     }
 
     split() : Array<string> {
-        return this.raw.split('.');
+        return (this.raw.length > 0 ? this.raw.split('.') : []);
     }
 
     append(other_path : Path) : Path {
