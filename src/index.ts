@@ -1,6 +1,6 @@
 /// <reference path="./helpers.ts" />
 
-let exports = {
+let api = {
     query: function () : QueryBuilder {
         return new QueryBuilder();
     },
@@ -20,7 +20,7 @@ let exports = {
 
 for (let it = 0; ExprReducerOperator[it] !== undefined; it++) {
     let op = ExprReducerOperator[it];
-    exports[op] = function (index : number) {
+    api[op] = function (index : number) {
         return function (expr : any) : Reducer {
             return new ExprReducer(index, CoerceToExpression(expr));
         };

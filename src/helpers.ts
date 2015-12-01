@@ -1,12 +1,6 @@
 /// <reference path="./query.ts" />
 
-declare class ErrorClass implements Error {
-    public name: string;
-    public message: string;
-    constructor(message?: string);
-}
-
-class CoercionError extends ErrorClass {
+class CoercionError extends Error {
     public name = "CoercionError";
     constructor (public message?: string) {
         super(message);
@@ -29,13 +23,13 @@ function CoerceToPath(path : any) : Path {
 }
 
 function CoerceToValue(val : any) : Value {
-    if (val instanceof Date 
+    if ((val instanceof Date 
             || typeof val === 'string' 
             || typeof val === 'boolean'  
-            || typeof val === 'number'
-            && ( this.val === this.val // test for NaN
-                && this.val !== Infinity
-                && this.val !== -Infinity )) {
+            || typeof val === 'number')
+            && ( val === val // test for NaN
+                && val !== Infinity
+                && val !== -Infinity )) {
         return new Value(val);
     }
     throw new CoercionError("Can't build a Value from: " + JSON.stringify(val)); 
@@ -52,7 +46,7 @@ function CoerceToExpression(expr : any) : Expression {
         return new PathExpr(expr);
     }
     if (expr instanceof Date) {
-        return new ValueExpr(expr);
+        return new ValueExpr(CoerceToValue(expr));
     }
     switch (typeof expr) {
         case "string":
@@ -150,6 +144,16 @@ function CoerceToReduceOpValuesMapping(mapping : any) : ReduceOpValuesMapping {
         }
     });
     return new ReduceOpValuesMapping(mapping);
+}
+
+function CoerceToQuery(qry : any) : Query {
+    if (qry instanceof QueryBuilder) {
+        return qry.query;
+    }
+    if (qry instanceof Query) {
+        return qry;
+    }
+    throw new CoercionError("Can't build a Qeury from: " + JSON.stringify(qry)); 
 }
 
 class ExpressionBuilder implements Serializable {
