@@ -1,76 +1,119 @@
-/*
- * Simple Arithmetics Grammar
- * ==========================
- *
- * Accepts expressions like "2 * (3 + 4)" and computes their value.
- */
+// QUERY
+Query
+  = _ Operation (_ Operation)* _
+
+// OPERATIONS
+Operation
+  = ReduceOp / MapOp / FilterOp / ConcatOp / LimitOp / SkipOp
+
+ReduceOp
+  = "REDUCE"i _ "KEYS"i _ ReduceOpKeysMapping _ "VALUES"i _ ReduceOpValuesMapping
+
+ReduceOpKeysMapping
+  = "{" _ KeyName _ ":" _ Expression (_ "," _ KeyName _ ":" _ Expression)* _ "}"
+
+ReduceOpValuesMapping
+  = "{" _ KeyName _ ":" _ ExprReducer (_ "," _ KeyName _ ":" _ ExprReducer)* _ "}"
+
+MapOp
+  = "MAP"i _ MapOpMapping
+
+MapOpMapping
+  = "{" _ KeyName _ ":" _ ( Expression / ArrayExpression ) (_ "," _ KeyName _ ":" _ ( Expression / ArrayExpression ))* _ "}"
+
+ConcatOp
+  = "CONCAT"i _ "[" _ Path (_ "," _ Path)* _ "]"
+
+FilterOp
+  = "FILTER"i _ Condition
+
+SkipOp
+  = "SKIP"i _ Integer
+ 
+LimitOp
+  = "LIMIT"i _ Integer
+
+// REDUCERS
+Reducer
+  = ExprReducer
+
+ExprReducer
+  = ( "SUM"i / "AVG"i / "COUNT"i / "MIN"i / "MAX"i ) _ Expression
 
 // CONDITIONS
 Condition
-  = AndCondition
+  = OrCondition
+
+OrCondition
+  = AndCondition (_ "OR"i _ AndCondition)*
 
 AndCondition
-  = OrCondition (_ "AND" _ OrCondition)*
-  
-OrCondition
-  = BaseCondition (_ "OR" _ BaseCondition)*
+  = BaseCondition (_ "AND"i _ BaseCondition)*
 
 BaseCondition
   = ExistsCondition / BinaryExprCondition / EachCondCondition / ListCondition / LikeCondition / "(" _ Condition _ ")"
 
 EachCondCondition
-  = ("ANY" / "ALL") _ Path _ "MATCH" _ BaseCondition
+  = ("ANY"i / "ALL"i) _ Path _ "MATCH"i _ BaseCondition
 
 ListCondition
-  = Path _ ( "IN" / "NIN" ) _ "[" _ Value (_ "," _ Value)* _ "]"
+  = Path _ ( "IN"i / "NIN"i ) _ "[" _ Value (_ "," _ Value)* _ "]"
 
 LikeCondition
-  = Path _ "LIKE" _ String
+  = Path _ "LIKE"i _ String
   
 ExistsCondition
-  = Path _ "EXISTS"
+  = Path _ "EXISTS"i
 
 BinaryExprCondition
   = Expression _ ( "<=" / "<" / ">=" / ">" / "!=" / "=" ) _ Expression
+  
+// ARRAYEXPR
+ArrayExpression
+  = "FOR"i _ "EACH"i _ Path (_ ( FilterOp / MapOp ) )*
 
 // EXPRESSIONS
 Expression
-  = ReducedExpression / MultExpression 
+  = ReducedExpression / AddExpression 
 
 ReducedExpression
-  = "FOR" _ "EACH" _ Path (_ ( ( "FILTER" _ Condition ) / ( "MAP" _ Expression ) ) )* _ ( "SUM" / "AVG" / "COUNT") _ Path
+  = ArrayExpression _ ExprReducer
 
-MultExpression
-  = AddExpression (_ ( "*" / "/" ) _ AddExpression)*
-  
 AddExpression
-  = BaseExpression (_ ( "+" / "-" ) _ BaseExpression)*
+  = MultExpression (_ ( "+" / "-" ) _ MultExpression)*
+  
+MultExpression
+  = BaseExpression (_ ( "*" / "/" ) _ BaseExpression)*
 
 BaseExpression
   = Value / Path / "("_ Expression _ ")"
 
 Path
-  = [a-zA-Z]+("."[a-zA-Z]+)*
+  = KeyName ("." KeyName)*
 
 Value
-  = String / Boolean / Number / Date / DateTime
+  = String / Boolean / Number / Date / Timestamp
 
-DateTime
-  = "TIMESTAMP" _ "\"" digit digit digit digit "-" digit digit "-" digit digit " " digit digit ":" digit digit ":" digit digit "\""
+Timestamp
+  = "TIMESTAMP"i _ "\"" [0-9-:]+ "\""
 
 Date
-  = "DATE" _ "\"" digit digit digit digit "-" digit digit "-" digit digit "\""
-
-digit = [0-9]
+  = "DATE"i _ "\"" [0-9-]+ "\""
 
 Boolean
-  = "true" / "false"
+  = "TRUE"i / "FALSE"i
 
 String
-  = "\"" text:[^"]* "\""
+  = "\"" [^"]* "\""
 
 Number
-  = ("-"/"+")?[0-9]+("."[0-9]+)? { return parseFloat(text()); } 
+  = Integer / ("-"/"+")?[0-9]+("."[0-9]+)? { return parseFloat(text()); } 
 
+Integer
+  = [0-9]+ { return parseInt(text(), 10); }
+
+KeyName
+  = [a-zA-Z0-9_-]+
+  
 _ "whitespace"
   = [ \t\n\r]*
