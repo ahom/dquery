@@ -1,3 +1,10 @@
+/*
+ * Simple Arithmetics Grammar
+ * ==========================
+ *
+ * Accepts expressions like "2 * (3 + 4)" and computes their value.
+ */
+
 // CONDITIONS
 Condition
   = AndCondition
@@ -46,8 +53,16 @@ Path
   = [a-zA-Z]+("."[a-zA-Z]+)*
 
 Value
-  = String / Boolean / Number
-  
+  = String / Boolean / Number / Date / DateTime
+
+DateTime
+  = "TIMESTAMP" _ "\"" digit digit digit digit "-" digit digit "-" digit digit " " digit digit ":" digit digit ":" digit digit "\""
+
+Date
+  = "DATE" _ "\"" digit digit digit digit "-" digit digit "-" digit digit "\""
+
+digit = [0-9]
+
 Boolean
   = "true" / "false"
 
