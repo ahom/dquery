@@ -1,0 +1,61 @@
+// CONDITIONS
+Condition
+  = AndCondition
+
+AndCondition
+  = OrCondition (_ "AND" _ OrCondition)*
+  
+OrCondition
+  = BaseCondition (_ "OR" _ BaseCondition)*
+
+BaseCondition
+  = ExistsCondition / BinaryExprCondition / EachCondCondition / ListCondition / LikeCondition / "(" _ Condition _ ")"
+
+EachCondCondition
+  = ("ANY" / "ALL") _ Path _ "MATCH" _ BaseCondition
+
+ListCondition
+  = Path _ ( "IN" / "NIN" ) _ "[" _ Value (_ "," _ Value)* _ "]"
+
+LikeCondition
+  = Path _ "LIKE" _ String
+  
+ExistsCondition
+  = Path _ "EXISTS"
+
+BinaryExprCondition
+  = Expression _ ( "<=" / "<" / ">=" / ">" / "!=" / "=" ) _ Expression
+
+// EXPRESSIONS
+Expression
+  = ReducedExpression / MultExpression 
+
+ReducedExpression
+  = "FOR" _ "EACH" _ Path (_ ( ( "FILTER" _ Condition ) / ( "MAP" _ Expression ) ) )* _ ( "SUM" / "AVG" / "COUNT") _ Path
+
+MultExpression
+  = AddExpression (_ ( "*" / "/" ) _ AddExpression)*
+  
+AddExpression
+  = BaseExpression (_ ( "+" / "-" ) _ BaseExpression)*
+
+BaseExpression
+  = Value / Path / "("_ Expression _ ")"
+
+Path
+  = [a-zA-Z]+("."[a-zA-Z]+)*
+
+Value
+  = String / Boolean / Number
+  
+Boolean
+  = "true" / "false"
+
+String
+  = "\"" text:[^"]* "\""
+
+Number
+  = ("-"/"+")?[0-9]+("."[0-9]+)? { return parseFloat(text()); } 
+
+_ "whitespace"
+  = [ \t\n\r]*
