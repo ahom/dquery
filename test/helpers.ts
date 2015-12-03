@@ -58,8 +58,8 @@ describe('helpers', () => {
     });
     describe('CoerceToArrayExpr', () => {
         it('should build valid array exprs', () => {
-            expect(CoerceToArrayExpr(new ArrayExprBuilder("my.path"))).toEqual(new ArrayExpr(new Path("my.path"), []));
-            expect(CoerceToArrayExpr(new ArrayExpr(new Path("my.path"), []))).toEqual(new ArrayExpr(new Path("my.path"), []));
+            expect(CoerceToArrayExpr(new ArrayExprBuilder("alias", "my.path"))).toEqual(new ArrayExpr("alias", new Path("my.path"), []));
+            expect(CoerceToArrayExpr(new ArrayExpr("alias", new Path("my.path"), []))).toEqual(new ArrayExpr("alias", new Path("my.path"), []));
         });
         it('should throw on invalid array expr', () => {
             for (let val of [{}, null]) {
@@ -84,7 +84,7 @@ describe('helpers', () => {
                 path: "$my.path",
                 embed: {
                     for: {
-                        ever: new ArrayExprBuilder("my.path")
+                        ever: new ArrayExprBuilder("alias", "my.path")
                     }
                 }
             })).toEqual(new MapOpMapping({
@@ -92,7 +92,7 @@ describe('helpers', () => {
                 path: CoerceToExpression("$my.path"),
                 embed: {
                     for: {
-                        ever: CoerceToArrayExpr(new ArrayExprBuilder("my.path"))
+                        ever: CoerceToArrayExpr(new ArrayExprBuilder("alias", "my.path"))
                     }
                 }
             }));
@@ -166,14 +166,19 @@ describe('helpers', () => {
                 ));
             }
         });
-        it('should build BinaryExprExpr', () => {
-            for (let i = 0; BinaryExprExprOperator[i] !== undefined; i++) {
-                let op = BinaryExprExprOperator[i];
-                let expr : any = new ExpressionBuilder("$my.path")[op](2);
-                expect(CoerceToExpression(expr)).toEqual(new BinaryExprExpr(
-                    new PathExpr(new Path("my.path")),
+        it('should build NaryExprExpr', () => {
+            for (let i = 0; NaryExprExprOperator[i] !== undefined; i++) {
+                let op = NaryExprExprOperator[i];
+                let sub_expr = CoerceToExpression(new ExpressionBuilder(2));
+                let expr : any = new ExpressionBuilder(sub_expr)[op](sub_expr);
+                expect(CoerceToExpression(expr)).toEqual(new NaryExprExpr(
                     i,
-                    new ValueExpr(new Value(2))
+                    [sub_expr, sub_expr]
+                ));
+                expr = new ExpressionBuilder(sub_expr)[op]([sub_expr, sub_expr]);
+                expect(CoerceToExpression(expr)).toEqual(new NaryExprExpr(
+                    i,
+                    [sub_expr, sub_expr, sub_expr]
                 ));
             }
         });
@@ -183,9 +188,9 @@ describe('helpers', () => {
             let cond : any = new PathExpressionBuilder("my.path").exists();
             expect(CoerceToCondition(cond)).toEqual(new ExistsCond(new Path("my.path")));
         });
-        it('should build LikeCond', () => {
-            let cond : any = new PathExpressionBuilder("my.path").like("regex");
-            expect(CoerceToCondition(cond)).toEqual(new LikeCond(
+        it('should build MatchCond', () => {
+            let cond : any = new PathExpressionBuilder("my.path").match("regex");
+            expect(CoerceToCondition(cond)).toEqual(new MatchCond(
                 new Path("my.path"),
                 "regex"
             ));
@@ -215,7 +220,7 @@ describe('helpers', () => {
     });
     describe('ArrayExprBuilder', () => {
         it('should build ReducedExpr', () => {
-            let arr : any = new ArrayExprBuilder("my.path");
+            let arr : any = new ArrayExprBuilder("alias", "my.path");
             for (let i = 0; ExprReducerOperator[i] !== undefined; i++) {
                 let op = ExprReducerOperator[i];
                 let expr : any = arr[op](new PathExpr(new Path("my.path")));
@@ -236,11 +241,12 @@ describe('helpers', () => {
                     i,
                     [sub_cond, sub_cond]
                 ));
+                cond = new ConditionBuilder(sub_cond)[op]([sub_cond, sub_cond]);
+                expect(CoerceToCondition(cond)).toEqual(new NaryCondCond(
+                    i,
+                    [sub_cond, sub_cond, sub_cond]
+                ));
             }
-        });
-        it('should throw for different NaryCond', () => {
-            let sub_cond = new ExistsCond(new Path("my.path"));
-            expect(() => new ConditionBuilder(sub_cond)["and"](sub_cond)["or"](sub_cond)).toThrowError(Error);
         });
     });
     describe('QueryBuilder', () => {

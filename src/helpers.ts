@@ -176,11 +176,19 @@ for (let it = 0; BinaryExprCondOperator[it] !== undefined; it++) {
     }(it);
 }
 
-for (let it = 0; BinaryExprExprOperator[it] !== undefined; it++) {
-    let op = BinaryExprExprOperator[it];
+for (let it = 0; NaryExprExprOperator[it] !== undefined; it++) {
+    let op = NaryExprExprOperator[it];
     ExpressionBuilder.prototype[op] = function (index : number) {
-        return function (rhe : any) : ExpressionBuilder {
-            this.lhe = new BinaryExprExpr(this.lhe, index, CoerceToExpression(rhe));
+        return function (exprs : any) : ExpressionBuilder {
+            if (!Array.isArray(exprs)) {
+                exprs = [exprs];
+            }
+            exprs = exprs.map((expr) => CoerceToExpression(expr));
+            if (this.lhe.type !== ExpressionType.nary_expr || index !== this.lhe.op) {
+                this.lhe = new NaryExprExpr(index, [this.lhe].concat(exprs));
+            } else {
+                this.lhe.exprs.push(...exprs);
+            }
             return this;
         };
     }(it);
@@ -197,9 +205,9 @@ class PathExpressionBuilder extends ExpressionBuilder {
         return new ConditionBuilder(new ExistsCond(this.path));
     }
     
-    like(regex : string) : ConditionBuilder {
+    match(regex : string) : ConditionBuilder {
         if (typeof regex === 'string') {
-            return new ConditionBuilder(new LikeCond(this.path, regex));
+            return new ConditionBuilder(new MatchCond(this.path, regex));
         }
         throw new Error("Can't build a regex with: " + JSON.stringify(regex));
     }
@@ -228,8 +236,11 @@ for (let it = 0; EachCondCondOperator[it] !== undefined; it++) {
 
 class ArrayExprBuilder implements Serializable {
     public arr : ArrayExpr;
-    constructor(path : any) {
-        this.arr = new ArrayExpr(CoerceToPath(path));
+    constructor(alias : any, path : any) {
+        if (typeof alias !== "string") {
+            throw new Error("Can't build an ArrayExpr from: " + JSON.stringify(alias));
+        }
+        this.arr = new ArrayExpr(<string>alias, CoerceToPath(path));
     }
 
     serialize() : any {
@@ -270,15 +281,15 @@ class ConditionBuilder implements Serializable {
 for (let it = 0; NaryCondCondOperator[it] !== undefined; it++) {
     let op = NaryCondCondOperator[it];
     ConditionBuilder.prototype[op] = function (index : number) {
-        return function (rhc : any) : ConditionBuilder {
-            if (this.lhc.type !== ConditionType.nary_cond) {
-                this.lhc = new NaryCondCond(index, [this.lhc, CoerceToCondition(rhc)]);
+        return function (conds : any) : ConditionBuilder {
+            if (!Array.isArray(conds)) {
+                conds = [conds];
+            }
+            conds = conds.map((cond) => CoerceToCondition(cond));
+            if (this.lhc.type !== ConditionType.nary_cond || index !== this.lhc.op) {
+                this.lhc = new NaryCondCond(index, [this.lhc].concat(conds));
             } else {
-                if (index === this.lhc.op) {
-                    this.lhc.conds.push(CoerceToCondition(rhc));
-                } else {
-                    throw new Error("Can't concatenate [" + NaryCondCondOperator[index] + "] and [" + NaryCondCondOperator[this.lhc.op] + "] conditions");
-                }
+                this.lhc.conds.push(...conds);
             }
             return this;
         };

@@ -13,8 +13,16 @@ let api = {
         return new ExpressionBuilder(expr);
     },
 
-    for_each: function(path : any) : ArrayExprBuilder {
-        return new ArrayExprBuilder(path);
+    for: function(alias : any) : { in: (path : any) => ArrayExprBuilder } {
+        return {
+            in: function(path : any) : ArrayExprBuilder {
+                return new ArrayExprBuilder(alias, path);
+            }
+        }
+    },
+
+    not: function(cond : any) : ConditionBuilder {
+        return new ConditionBuilder(new NotCond(CoerceToCondition(cond)));
     }
 };
 

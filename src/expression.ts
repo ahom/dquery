@@ -6,7 +6,7 @@
 enum ExpressionType {
     value,
     path,
-    binary_expr,
+    nary_expr,
     reducer
 };
 
@@ -58,34 +58,32 @@ class PathExpr extends Expression {
     }
 }
 
-enum BinaryExprExprOperator {
-    plus,
-    minus,
-    divide,
-    multiply
+enum NaryExprExprOperator {
+    add,
+    sub,
+    mul,
+    div
 };
 
-@register_serial("expr:binary_expr", "1", {
-    1: BinaryExprExpr.Deserialize
+@register_serial("expr:nary_expr", "1", {
+    1: NaryExprExpr.Deserialize
 })
-class BinaryExprExpr extends Expression {
-    constructor(public lhe : Expression, public op : BinaryExprExprOperator, public rhe : Expression) {
-        super(ExpressionType.binary_expr);
+class NaryExprExpr extends Expression {
+    constructor(public op : NaryExprExprOperator, public exprs : Array<Expression> = []) {
+        super(ExpressionType.nary_expr);
     }
 
     serialize() : any {
         return {
-            lhe: this.lhe.serialize(),
-            op: BinaryExprExprOperator[this.op],
-            rhe: this.rhe.serialize()
+            op: NaryExprExprOperator[this.op],
+            exprs: this.exprs.map((expr) => expr.serialize())
         }
     }
 
-    static Deserialize(input : any) : BinaryExprExpr {
-        return new BinaryExprExpr(
-            deserialize_expr(input.lhe),
-            BinaryExprExprOperator[<string>input.op],
-            deserialize_expr(input.rhe)
+    static Deserialize(input : any) : NaryExprExpr {
+        return new NaryExprExpr(
+            NaryExprExprOperator[<string>input.op],
+            input.exprs.map((expr) => deserialize_expr(expr))
         );
     }
 }
@@ -104,11 +102,12 @@ function deserialize_array_expr(input : any) : ArrayExpr {
     1: ArrayExpr.Deserialize
 })
 class ArrayExpr implements Serializable {
-    constructor(public path : Path, public ops : Array<ArrayExprOperation> = []) {
+    constructor(public alias : string, public path : Path, public ops : Array<ArrayExprOperation> = []) {
     }
 
     serialize() : any {
         return {
+            alias: this.alias,
             path: this.path.serialize(),
             ops: this.ops.map((op) => op.serialize())
         }
@@ -116,6 +115,7 @@ class ArrayExpr implements Serializable {
 
     static Deserialize(input : any) : ArrayExpr {
         return new ArrayExpr(
+            input.alias,
             Path.Deserialize(input.path),
             input.ops.map((op) => deserialize_op(op))
         );

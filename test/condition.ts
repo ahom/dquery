@@ -26,9 +26,14 @@ describe('condition', () => {
             }
         });
     });
-    describe('like', () => {
+    describe('not', () => {
         it('should be serializable', () => {
-            serialize_check(new LikeCond(new Path('my.path'), 'a_super_regex_lolz*[(/'));
+            serialize_check(new NotCond(new ExistsCond(new Path('my.path'))));
+        });
+    });
+    describe('match', () => {
+        it('should be serializable', () => {
+            serialize_check(new MatchCond(new Path('my.path'), 'a_super_regex_lolz*[(/'));
         });
     });
     describe('list', () => {

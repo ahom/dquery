@@ -3,7 +3,8 @@
 enum ConditionType {
     binary_expr,
     nary_cond,
-    like,
+    not,
+    match,
     exists,
     list,
     each_cond
@@ -85,12 +86,29 @@ class NaryCondCond extends Condition {
     }
 }
 
-@register_serial("cond:like", "1", {
-    1: LikeCond.Deserialize
+@register_serial("cond:not", "1", {
+    1: NotCond.Deserialize
 })
-class LikeCond extends Condition {
+class NotCond extends Condition {
+    constructor(public cond : Condition) {
+        super(ConditionType.not);
+    }
+
+    serialize() : any {
+        return this.cond.serialize(); 
+    }
+
+    static Deserialize(input : any) : NotCond {
+        return new NotCond(deserialize_cond(input));
+    }
+}
+
+@register_serial("cond:match", "1", {
+    1: MatchCond.Deserialize
+})
+class MatchCond extends Condition {
     constructor(public path : Path, public regex : string) {
-        super(ConditionType.like);
+        super(ConditionType.match);
     }
 
     serialize() : any {
@@ -100,8 +118,8 @@ class LikeCond extends Condition {
         }
     }
 
-    static Deserialize(input : any) : LikeCond {
-        return new LikeCond(
+    static Deserialize(input : any) : MatchCond {
+        return new MatchCond(
             Path.Deserialize(input.path),
             input.regex
         );

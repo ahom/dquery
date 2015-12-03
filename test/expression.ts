@@ -34,16 +34,17 @@ describe('expession', () => {
             serialize_check(new PathExpr(new Path('my.path')));
         });
     });
-    describe('binary_expr', () => {
+    describe('nary_expr', () => {
         it('should be serializable', () => {
-            for (let i = 0; BinaryExprExprOperator[i] !== undefined; i++) {
-                serialize_check(new BinaryExprExpr(v(0), i, v(1)));
+            for (let i = 0; NaryExprExprOperator[i] !== undefined; i++) {
+                serialize_check(new NaryExprExpr(i, [v(0), v(1)]));
             }
         });
     });
     describe('array', () => {
         it('should be serializable', () => {
             let arr_expr = new ArrayExpr(
+                "alias",
                 new Path('my.path'),
                 [ new MapOp(new MapOpMapping({})) ]
             );
@@ -54,6 +55,7 @@ describe('expession', () => {
         it('should be serializable', () => {
             let reduced_expr = new ReducedExpr(
                 new ArrayExpr(
+                    "alias",
                     new Path('my.path'),
                     [ new MapOp(new MapOpMapping({})) ]
                 ),
