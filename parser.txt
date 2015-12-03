@@ -1,119 +1,318 @@
+{
+	function parse_repetition(name, expr_name, head, tail, op_idx, expr_idx) { 
+  		if (tail.length === 0) {
+        	return head;
+        }
+        let rv = null;
+        tail.map(function (item) {
+        	if (rv !== null && item[op_idx] === rv.op) {
+            	rv[expr_name].push(item[expr_idx]);
+            } else {
+            	if (rv === null) {
+                	rv = head;
+                }
+                let next_rv = {
+                	type: name,
+                    op: item[op_idx]
+                };
+                next_rv[expr_name] = [rv, item[expr_idx]];
+                rv = next_rv;
+            }
+        });
+  		return rv;
+    }
+    
+    function parse_mapping(key, expr, tail, key_idx, expr_idx) {
+    	let rv = {};
+        rv[key] = expr;
+        tail.map(function (item) {
+        	rv[item[key_idx]] = item[expr_idx];
+        });
+        return rv;
+    }
+}
+
 // QUERY
 Query
-  = _ Operation (_ Operation)* _
+  = ops:(_ Operation)+ _ { 
+        return {
+        	type: "query",
+            ops: ops.map(function (op) { return op[1]; })
+        }
+    }
 
 // OPERATIONS
 Operation
   = ReduceOp / MapOp / FilterOp / ConcatOp / LimitOp / SkipOp
 
 ReduceOp
-  = "REDUCE"i _ "KEYS"i _ ReduceOpKeysMapping _ "VALUES"i _ ReduceOpValuesMapping
+  = "REDUCE"i _ "KEYS"i _ keys:ReduceOpKeysMapping _ "VALUES"i _ values:ReduceOpValuesMapping { 
+        return {
+        	type: "reduce_op",
+            keys_mapping: keys,
+            values_mapping: values
+        }
+    }
 
 ReduceOpKeysMapping
-  = "{" _ KeyName _ ":" _ Expression (_ "," _ KeyName _ ":" _ Expression)* _ "}"
+  = "{" _ key:KeyName _ ":" _ expr:Expression tail:(_ "," _ KeyName _ ":" _ Expression)* _ "}" { 
+  		return parse_mapping(key, expr, tail, 3, 7);
+    }
 
 ReduceOpValuesMapping
-  = "{" _ KeyName _ ":" _ ExprReducer (_ "," _ KeyName _ ":" _ ExprReducer)* _ "}"
+  = "{" _ key:KeyName _ ":" _ red:ExprReducer tail:(_ "," _ KeyName _ ":" _ ExprReducer)* _ "}" { 
+  		return parse_mapping(key, expr, tail, 3, 7);
+    }
 
 MapOp
-  = "MAP"i _ MapOpMapping
+  = "MAP"i _ mapping:MapOpMapping { 
+        return {
+    		type: "map_op",
+            mapping: mapping
+    	}
+    }
 
 MapOpMapping
-  = "{" _ KeyName _ ":" _ ( Expression / ArrayExpression ) (_ "," _ KeyName _ ":" _ ( Expression / ArrayExpression ))* _ "}"
+  = "{" _ key:KeyName _ ":" _ expr:( Expression / ArrayExpr ) tail:(_ "," _ KeyName _ ":" _ ( Expression / ArrayExpr ))* _ "}" {
+        return parse_mapping(key, expr, tail, 3, 7);
+    }
 
 ConcatOp
-  = "CONCAT"i _ "[" _ Path (_ "," _ Path)* _ "]"
+  = "CONCAT"i _ "[" _ head:Path tail:(_ "," _ Path)* _ "]" { 
+  		return {
+    		type: "concat_op",
+            paths: [head].concat(tail.map(function (item) { return item[3]; }))
+    	}
+    }
 
 FilterOp
-  = "FILTER"i _ Condition
+  = "FILTER"i _ cond:Condition { 
+  		return {
+    		type: "filter_op",
+            cond: cond
+    	}
+    }
 
 SkipOp
-  = "SKIP"i _ Integer
+  = "SKIP"i _ val:Integer { 
+  		return {
+    		type: "skip_op",
+            val: val
+    	}
+    }
  
 LimitOp
-  = "LIMIT"i _ Integer
+  = "LIMIT"i _ val:Integer { 
+  		return {
+    		type: "limit_op",
+            val: val
+    	}
+    }
 
 // REDUCERS
 Reducer
   = ExprReducer
 
 ExprReducer
-  = ( "SUM"i / "AVG"i / "COUNT"i / "MIN"i / "MAX"i ) _ Expression
+  = op:( "SUM"i / "AVG"i / "COUNT"i / "MIN"i / "MAX"i ) _ expr:Expression { 
+  		return {
+    		type: "expr_red",
+            op: op.toUpperCase(),
+            expr: expr
+    	}
+    }
 
 // CONDITIONS
 Condition
   = OrCondition
 
 OrCondition
-  = AndCondition (_ "OR"i _ AndCondition)*
+  = head:AndCondition tail:(_ "OR"i _ AndCondition)* { 
+  		return parse_repetition("nary_cond_cond", "conds", head, tail, 1, 3);
+    }
 
 AndCondition
-  = BaseCondition (_ "AND"i _ BaseCondition)*
+  = head:BaseCondition tail:(_ "AND"i _ BaseCondition)* { 
+  		return parse_repetition("nary_cond_cond", "conds", head, tail, 1, 3);
+    }
 
 BaseCondition
-  = ExistsCondition / BinaryExprCondition / EachCondCondition / ListCondition / LikeCondition / "(" _ Condition _ ")"
+  = ExistsCondition / BinaryExprCondition / EachCondCondition / ListCondition / MatchCondition / NotCondition / "(" _ Condition _ ")"
+
+NotCondition
+  = "NOT"i _ cond:BaseCondition { 
+  		return {
+    		type: "not_cond",
+            cond: cond
+    	}
+    }
 
 EachCondCondition
-  = ("ANY"i / "ALL"i) _ Path _ "MATCH"i _ BaseCondition
+  = op:("ANY"i / "ALL"i) _ path:Path _ "MATCH"i _ cond:BaseCondition { 
+  		return {
+    		type: "each_cond_cond",
+        	path: path,
+            op: op.toUpperCase(),
+            cond: cond
+    	}
+    }
 
 ListCondition
-  = Path _ ( "IN"i / "NIN"i ) _ "[" _ Value (_ "," _ Value)* _ "]"
+  = path:Path _ op:( "IN"i / "NIN"i ) _ "[" _ head:Value tail:(_ "," _ Value)* _ "]" { 
+  		return {
+    		type: "list_cond",
+        	path: path,
+            op: op.toUpperCase(),
+            values: [head].concat(tail.map(function(item) { return item[3]; }))
+    	}
+    }
 
-LikeCondition
-  = Path _ "LIKE"i _ String
+MatchCondition
+  = path:Path _ "MATCH"i _ regex:String { 
+  		return {
+    		type: "match_cond",
+        	path: path,
+            regex: regex
+    	}
+    }
   
 ExistsCondition
-  = Path _ "EXISTS"i
+  = path:Path _ "EXISTS"i { 
+  		return {
+    		type: "exists_cond",
+        	path: path
+    	}
+    }
 
 BinaryExprCondition
-  = Expression _ ( "<=" / "<" / ">=" / ">" / "!=" / "=" ) _ Expression
+  = lhe:Expression _ op:( "<=" / "<" / ">=" / ">" / "!=" / "=" ) _ rhe:Expression { 
+  		return {
+    		type: "binary_expr_cond",
+        	lhe: lhe,
+            op: op,
+            rhe: rhe
+    	}
+    }
   
 // ARRAYEXPR
-ArrayExpression
-  = "FOR"i _ "EACH"i _ Path (_ ( FilterOp / MapOp ) )*
+ArrayExpr
+  = "FOR"i _ alias:KeyName _ "IN"i _ path:Path ops:(_ ( FilterOp / MapOp ) )* { 
+  		return {
+    		type: "array_expr",
+        	alias: alias,
+            path: path,
+            ops: ops.map(function(op) { return op[1]; })
+    	}
+    }
 
 // EXPRESSIONS
 Expression
-  = ReducedExpression / AddExpression 
+  = ReducedExpr / AddExpression 
 
-ReducedExpression
-  = ArrayExpression _ ExprReducer
+ReducedExpr
+  = arr:ArrayExpr _ red:ExprReducer { 
+  		return {
+    		type: "reduced_expr",
+        	arr: arr,
+            red: red
+    	}
+    }
 
 AddExpression
-  = MultExpression (_ ( "+" / "-" ) _ MultExpression)*
+  = head:MulExpression tail:(_ ( "+" / "-" ) _ MulExpression)* { 
+  		return parse_repetition("nary_expr_expr", "exprs", head, tail, 1, 3);
+    }
   
-MultExpression
-  = BaseExpression (_ ( "*" / "/" ) _ BaseExpression)*
-
+MulExpression
+  = head:BaseExpression tail:(_ ( "*" / "/" ) _ BaseExpression)* { 
+  		return parse_repetition("nary_expr_expr", "exprs", head, tail, 1, 3);
+    }
+  	
 BaseExpression
-  = Value / Path / "("_ Expression _ ")"
+  = Value / Path / "("_ expr:Expression _ ")" {
+      return expr;
+  }
 
 Path
-  = KeyName ("." KeyName)*
+  = KeyName ("." KeyName)* { 
+  		return {
+    		type: "path",
+        	value: text() 
+    	}
+    }
 
 Value
   = String / Boolean / Number / Date / Timestamp
 
 Timestamp
-  = "TIMESTAMP"i _ "\"" [0-9-:]+ "\""
+  = "TIMESTAMP"i _ "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) " " hour:(digit digit) ":" minutes:(digit digit) ":" seconds:(digit digit) "\"" { 
+  		return {
+    		type: "timestamp",
+        	value: new Date(
+            	parseInt(year.join(""), 10), 
+                parseInt(month.join(""), 10),
+                parseInt(day.join(""), 10),
+                parseInt(hour.join(""), 10),
+                parseInt(minutes.join(""), 10),
+                parseInt(seconds.join(""), 10)
+            )
+    	}
+    }
 
 Date
-  = "DATE"i _ "\"" [0-9-]+ "\""
+  = "DATE"i _ "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) "\"" { 
+  		return {
+    		type: "date",
+        	value: new Date(
+            	parseInt(year.join(""), 10), 
+                parseInt(month.join(""), 10),
+                parseInt(day.join(""), 10)
+            )
+    	}
+    }
+
+digit
+  = [0-9]
 
 Boolean
-  = "TRUE"i / "FALSE"i
+  = ("TRUE"i / "FALSE"i) { 
+  		return {
+    		type: "value",
+        	value: text().toUpperCase() === "TRUE" 
+    	}
+    }
 
 String
-  = "\"" [^"]* "\""
+  = "\"" val:[^"]* "\"" { 
+  		return {
+    		type: "string",
+        	value: val.join("")
+    	}
+    }
 
 Number
-  = Integer / ("-"/"+")?[0-9]+("."[0-9]+)? { return parseFloat(text()); } 
+  = Integer / Float
+
+Float
+  = ("-"/"+")?[0-9]+("."[0-9]+)? { 
+  		return {
+    		type: "float",
+        	value: parseFloat(text())
+    	}
+    }
 
 Integer
-  = [0-9]+ { return parseInt(text(), 10); }
+  = [0-9]+ { 
+  		return {
+    		type: "integer",
+        	value: parseInt(text(), 10)
+    	}
+    }
 
 KeyName
-  = [a-zA-Z0-9_-]+
+  = [a-zA-Z0-9_-]+ {
+  	  return text();
+  }
   
 _ "whitespace"
   = [ \t\n\r]*
