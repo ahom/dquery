@@ -1,7 +1,7 @@
 select {
     tax_type: tax_type,
-    txa: sum(select amount from cpn.txa where type = tax_type limit 2),
-    txo: sum(select amount from cpn.txo where type = tax_type skip 10 limit 20)
+    txa: sum(select amount[1] from cpn.txa where type = tax_type limit 2),
+    txo: select avg(amount) from cpn.txo where type = tax_type skip 10 limit 20
 }
 from (
     select {
