@@ -1,7 +1,7 @@
 {
-    function parse_op_repetition(name, head, tail) {
+	function parse_op_repetition(name, head, tail) {
         if (tail.length === 0) {
-        return head;
+            return head;
         }
         let rv = null;
         tail.map(function (item) {
@@ -33,317 +33,315 @@
 
 // QUERY
 Query
-    = _ select:SelectStatement 
-    blk from:FromStatement 
-    unnest:(blk UnNestStatement)* 
-    let_:(blk LetStatement)?
-    where:(blk WhereStatement)? 
-    pre_group_skip:(blk SkipStatement)? 
-    pre_group_limit:(blk LimitStatement)?
-    group_by:(blk GroupByStatement)? 
-    letting:(blk LettingStatement)?
-    having:(blk HavingStatement)? 
-    order_by:(blk OrderByStatement)? 
-    final_skip:(blk SkipStatement)? 
-    final_limit:(blk LimitStatement)? _ {
-        return {
-            type: "query",
-            select: select,
-            from: from,
-            unnests: unnest.map(function (item) { return item[1]; }),
-            let: let_ ? let_[1] : null,
-            where: where ? where[1] : null,
-            pre_group_skip: pre_group_skip ? pre_group_skip[1] : null,
-            pre_group_limit: pre_group_limit ? pre_group_limit[1] : null,
-            group_by: group_by ? group_by[1] : null,
-            letting: letting ? letting[1] : null,
-            having: having ? having[1] : null,
-            order_by: order_by ? order_by[1] : null,
-            final_skip: final_skip ? final_skip[1] : null,
-            final_limit: final_limit ? final_limit[1] : null
-        };
-    }
-    /
-    "(" _ query:Query _ ")" {
-        return query; 
-    }
+  = _ select:SelectStatement 
+  blk from:FromStatement 
+  unnest:(blk UnNestStatement)* 
+  let_:(blk LetStatement)?
+  where:(blk WhereStatement)? 
+  pre_group_skip:(blk SkipStatement)? 
+  pre_group_limit:(blk LimitStatement)?
+  group_by:(blk GroupByStatement)? 
+  letting:(blk LettingStatement)?
+  having:(blk HavingStatement)? 
+  order_by:(blk OrderByStatement)? 
+  final_skip:(blk SkipStatement)? 
+  final_limit:(blk LimitStatement)? _ {
+      return {
+          type: "query",
+          select: select,
+          from: from,
+          unnests: unnest.map(function (item) { return item[1]; }),
+          let: let_ ? let_[1] : null,
+          where: where ? where[1] : null,
+          pre_group_skip: pre_group_skip ? pre_group_skip[1] : null,
+          pre_group_limit: pre_group_limit ? pre_group_limit[1] : null,
+          group_by: group_by ? group_by[1] : null,
+          letting: letting ? letting[1] : null,
+          having: having ? having[1] : null,
+          order_by: order_by ? order_by[1] : null,
+          final_skip: final_skip ? final_skip[1] : null,
+          final_limit: final_limit ? final_limit[1] : null
+      };
+  }
+  /
+  "(" _ query:Query _ ")" {
+      return query; 
+  }
   
 // STATEMENTS
 SelectStatement
-    = "SELECT"i blk map:(SelectMapping / SimplifiedSelectMapping) {
-        return {
-            type: "select_stat",
-            map: map
-        };
-    }
+  = "SELECT"i blk map:(SelectMapping / SimplifiedSelectMapping) {
+      return {
+          type: "select_stat",
+          map: map
+      };
+  }
 
 SimplifiedSelectMapping
-    = head:SimplifiedSelectMappingKeyVal tail:(_ "," _ kv:SimplifiedSelectMappingKeyVal { return kv; })* {
+  = head:SimplifiedSelectMappingKeyVal tail:(_ "," _ kv:SimplifiedSelectMappingKeyVal { return kv; })* {
      return {
          type: "simplified_select_mapping",
          map: [head].concat(tail)
      };
-    }
+  }
 
 SimplifiedSelectMappingKeyVal
-    = expr:(Expression / ExprReducer) alias:(blk "AS"i blk KeyName)? {
-        return {
-            expr: expr,
-            alias: alias
-        };
-    }
+  = expr:(Expression / ExprReducer) alias:(blk "AS"i blk KeyName)? {
+      return {
+          expr: expr,
+          alias: alias
+      };
+  }
 
 SelectMapping 
-    = "{" _ head:SelectMappingKeyVal tail:(_ "," _ kv:SelectMappingKeyVal { return kv; })* _ "}" { 
+  = "{" _ head:SelectMappingKeyVal tail:(_ "," _ kv:SelectMappingKeyVal { return kv; })* _ "}" { 
         return {
-            type: "select_mapping",
-            map: parse_mapping(head, tail)
+        	type: "select_mapping",
+        	map: parse_mapping(head, tail)
         };
     }
     
 SelectMappingKeyVal
-    = key:KeyName _ ":" _ val:(LimitedQuery / SelectMapping / ExprReducer / Expression) {
-        return {
-            key: key,
-            val: val
-        };
-    }
+  = key:KeyName _ ":" _ val:(LimitedQuery / SelectMapping / ExprReducer / Expression) {
+      return {
+          key: key,
+          val: val
+      };
+  }
 
 FromStatement
-    = "FROM"i blk from:(Path / Query) alias:(blk "AS"i blk KeyName)? {
-        return {
-            type: "from_stat",
-            alias: alias ? alias[3] : null,
-            from: from
-        };
-    }
+  = "FROM"i blk from:(Path / Query) alias:(blk "AS"i blk KeyName)? {
+      return {
+          type: "from_stat",
+          alias: alias ? alias[3] : null,
+          from: from
+      };
+  }
 
 UnNestStatement
-    = "UNNEST"i blk path:Path {
-        return {
-            type: "unnest_stat",
-            path: path
-        };
-    }
+  = "UNNEST"i blk path:Path {
+      return {
+          type: "unnest_stat",
+          path: path
+      };
+  }
 
 LetStatement
-    = "LET"i blk head:LetKeyVal tail:(_ "," _ kv:LetKeyVal { return kv; })* {
-        return {
-            type: "let_stat",
-            kvs: [head].concat(tail)
-        };
-    }
+  = "LET"i blk head:LetKeyVal tail:(_ "," _ kv:LetKeyVal { return kv; })* {
+      return {
+          type: "let_stat",
+          kvs: [head].concat(tail)
+      };
+  }
 
 LetKeyVal
-    = key:KeyName _ "=" _ expr:Expression {
-        return {
-            key: key,
-            expr: expr
-        };
-    }
+  = key:KeyName _ "=" _ expr:Expression {
+      return {
+          key: key,
+          expr: expr
+      };
+  }
 
 WhereStatement
-    = "WHERE"i blk cond:Condition {
-        return {
-            type: "where_stat",
-            cond: cond
-        };
-    }
+  = "WHERE"i blk cond:Condition {
+      return {
+          type: "where_stat",
+          cond: cond
+      };
+  }
 
 GroupByStatement
-    = "GROUP"i blk "BY"i blk head:Expression tail:(_ "," _ expr:Expression { return expr; })* {
-        return {
-            type: "group_by_stat",
-            exprs: [head].concat(tail)
-        };
-    }
+  = "GROUP"i blk "BY"i blk head:Expression tail:(_ "," _ expr:Expression { return expr; })* {
+      return {
+          type: "group_by_stat",
+          exprs: [head].concat(tail)
+      };
+  }
 
 LettingStatement
-    = "LETTING"i blk head:LetKeyVal tail:(_ "," _ kv:LetKeyVal { return kv; })* {
-        return {
-            type: "letting_stat",
-            kvs: [head].concat(tail)
-        };
-    }
+  = "LETTING"i blk head:LetKeyVal tail:(_ "," _ kv:LetKeyVal { return kv; })* {
+      return {
+          type: "letting_stat",
+          kvs: [head].concat(tail)
+      };
+  }
 
 HavingStatement
-    = "HAVING"i blk cond:Condition {
-        return {
-            type: "having_stat",
-            cond: cond
-        };
-    }
+  = "HAVING"i blk cond:Condition {
+      return {
+          type: "having_stat",
+          cond: cond
+      };
+  }
 
 OrderByStatement
-    = "ORDER"i blk "BY"i blk head:OrderByStatementItem tail:(_ "," _ item:OrderByStatementItem { return item; })* {
-        return {
-            type: "order_by_stat",
-            orders: [head].concat(tail)
-        };
-    }
+  = "ORDER"i blk "BY"i blk head:OrderByStatementItem tail:(_ "," _ item:OrderByStatementItem { return item; })* {
+      return {
+          type: "order_by_stat",
+          orders: [head].concat(tail)
+      };
+  }
 
 OrderByStatementItem
-    = expr:Expression op:(blk ("ASC"i / "DESC"i))? {
-        return {
-            expr: expr,
-            order: op ? op[1].toUpperCase() : "ASC"
-        };
-    }
+  = expr:Expression op:(blk ("ASC"i / "DESC"i))? {
+      return {
+          expr: expr,
+          order: op ? op[1].toUpperCase() : "ASC"
+      };
+  }
 
 SkipStatement
-    = "SKIP"i blk val:Integer {
-        return {
-            type: "skip_stat",
-            value: val
-        };
-    }
+  = "SKIP"i blk val:Integer {
+      return {
+          type: "skip_stat",
+          value: val
+      };
+  }
   
 LimitStatement
-    = "LIMIT"i blk val:Integer {
-        return {
-            type: "limit_stat",
-            value: val
-        };
-    }
+  = "LIMIT"i blk val:Integer {
+      return {
+          type: "limit_stat",
+          value: val
+      };
+  }
 
 // LIMITED QUERY
 LimitedQuery 
-    =  _ select:LimitedSelectStatement 
-    blk from:LimitedFromStatement 
-    unnest:(blk UnNestStatement)* 
-    let_:(blk LetStatement)?
-    where:(blk WhereStatement)? 
-    skip:(blk SkipStatement)? 
-    limit:(blk LimitStatement)?
-    concat:(blk ConcatStatement)? _ {
-        return {
-            type: "limited_query",
-            select: select,
-            from: from,
-            unnests: unnest.map(function (item) { return item[1]; }),
-            let: let_ ? let_ : null,
-            where: where ? where[1] : null,
-            skip: skip ? skip[1] : null,
-            limit: limit ? limit[1] : null,
-            concat: concat ? concat[1] : null
-        };
-    }
-    /
-    "(" _ query:LimitedQuery _ ")" {
-        return query; 
-    }
+  =  _ select:LimitedSelectStatement 
+  blk from:LimitedFromStatement 
+  let_:(blk LetStatement)?
+  where:(blk WhereStatement)? 
+  skip:(blk SkipStatement)? 
+  limit:(blk LimitStatement)?
+  concat:(blk ConcatStatement)? _ {
+      return {
+          type: "limited_query",
+          select: select,
+          from: from,
+          let: let_ ? let_ : null,
+          where: where ? where[1] : null,
+          skip: skip ? skip[1] : null,
+          limit: limit ? limit[1] : null,
+          concat: concat ? concat[1] : null
+      };
+  }
+  /
+  "(" _ query:LimitedQuery _ ")" {
+      return query; 
+  }
 
 // STATEMENTS
 LimitedSelectStatement
-    = "SELECT"i blk map:(LimitedSelectMapping / LimitedSimplifiedSelectMapping) {
-        return {
-            type: "limited_select_stat",
-            map: map
-        };
-    }
+  = "SELECT"i blk map:(LimitedSelectMapping / LimitedSimplifiedSelectMapping) {
+      return {
+          type: "limited_select_stat",
+          map: map
+      };
+  }
 
 LimitedSimplifiedSelectMapping
-    = head:LimitedSimplifiedSelectMappingKeyVal tail:(_ "," _ kv:LimitedSimplifiedSelectMappingKeyVal { return kv; })* {
+  = head:LimitedSimplifiedSelectMappingKeyVal tail:(_ "," _ kv:LimitedSimplifiedSelectMappingKeyVal { return kv; })* {
      return {
          type: "limited_simplified_select_mapping",
          map: [head].concat(tail)
      };
-    }
+  }
 
 LimitedSimplifiedSelectMappingKeyVal
-    = expr:Expression alias:(blk "AS"i blk KeyName)? {
-        return {
-            expr: expr,
-            alias: alias
-        };
-    }
+  = expr:Expression alias:(blk "AS"i blk KeyName)? {
+      return {
+          expr: expr,
+          alias: alias
+      };
+  }
 
 LimitedSelectMapping 
-    = "{" _ head:LimitedSelectMappingKeyVal tail:(_ "," _ kv:LimitedSelectMappingKeyVal { return kv; })* _ "}" { 
+  = "{" _ head:LimitedSelectMappingKeyVal tail:(_ "," _ kv:LimitedSelectMappingKeyVal { return kv; })* _ "}" { 
         return {
-            type: "limited_select_mapping",
-            map: parse_mapping(head, tail)
+        	type: "limited_select_mapping",
+        	map: parse_mapping(head, tail)
         };
     }
     
 LimitedSelectMappingKeyVal
-    = key:KeyName _ ":" _ val:(LimitedQuery / SelectMapping / Expression) {
-        return {
-            key: key,
-            val: val
-        };
-    }
+  = key:KeyName _ ":" _ val:(LimitedQuery / SelectMapping / Expression) {
+      return {
+          key: key,
+          val: val
+      };
+  }
 
 LimitedFromStatement
-    = "FROM"i blk from:(Path / LimitedQuery) alias:(blk "AS"i blk KeyName)? {
-        return {
-            type: "limited_from_stat",
-            alias: alias ? alias[3] : null,
-            from: from
-        };
-    }
+  = "FROM"i blk from:(Path / LimitedQuery) alias:(blk "AS"i blk KeyName)? {
+      return {
+          type: "limited_from_stat",
+          alias: alias ? alias[3] : null,
+          from: from
+      };
+  }
 
 ConcatStatement
-    = op:("UNION"i / "INTERSECT"i / "EXCEPT"i) blk query:LimitedQuery {
+  = op:("UNION"i / "INTERSECT"i / "EXCEPT"i) blk query:LimitedQuery {
      return {
          type: "concat_stat",
          op: op[1].toUpperCase(),
          query: query
      };
-    }
+  }
 
 // REDUCERS
 Reducer
-    = ExprReducer 
-    / "(" _ red:Reducer _ ")" {
-        return red;
-    }
+  = ExprReducer 
+  / "(" _ red:Reducer _ ")" {
+      return red;
+  }
 
 ExprReducer
-    = op:("SUM"i / "AVG"i / "COUNT"i / "MAX"i / "MIN"i) _ "(" _ expr:Expression _ ")" {
-        return {
-            type: "expr_red",
-            op: op.toUpperCase(),
-            expr: expr
-        };
-    }
+  = op:("SUM"i / "AVG"i / "COUNT"i / "MAX"i / "MIN"i) _ "(" _ expr:Expression _ ")" {
+      return {
+          type: "expr_red",
+          op: op.toUpperCase(),
+          expr: expr
+      };
+  }
 
 // CONDITIONS
 Condition
-    = OrCondition
+  = OrCondition
 
 OrCondition
-    = head:AndCondition tail:(blk "OR"i blk cond:AndCondition { return { op: "OR", val: cond}; })* { 
-        return parse_op_repetition("nary_cond_cond", head, tail);
-    }
+  = head:AndCondition tail:(blk "OR"i blk cond:AndCondition { return { op: "OR", val: cond}; })* { 
+      return parse_op_repetition("nary_cond_cond", head, tail);
+  }
 
 AndCondition
-    = head:BaseCondition tail:(blk "AND"i blk cond:BaseCondition { return { op: "AND", val: cond}; })* { 
-        return parse_op_repetition("nary_cond_cond", head, tail);
-    }
+  = head:BaseCondition tail:(blk "AND"i blk cond:BaseCondition { return { op: "AND", val: cond}; })* { 
+      return parse_op_repetition("nary_cond_cond", head, tail);
+  }
 
 BaseCondition
-    = IsNullCondition 
-    / BinaryExprCondition 
-    / EachCondCondition 
-    / ListCondition 
-    / LikeCondition 
-    / NotCondition 
-    / "(" _ cond:Condition _ ")" { 
-        return cond;
+  = IsNullCondition 
+  / BinaryExprCondition 
+  / EachCondCondition 
+  / ListCondition 
+  / LikeCondition 
+  / NotCondition 
+  / "(" _ cond:Condition _ ")" { 
+          return cond;
     }
 
 NotCondition
-    = "NOT"i blk cond:BaseCondition { 
-        return {
+  = "NOT"i blk cond:BaseCondition { 
+          return {
             type: "not_cond",
             cond: cond
         };
     }
 
 EachCondCondition
-    = op:("ANY"i / "ALL"i) blk path:Path blk "MATCH"i blk cond:BaseCondition { 
-        return {
+  = op:("ANY"i / "ALL"i) blk path:Path blk "MATCH"i blk cond:BaseCondition { 
+          return {
             type: "each_cond_cond",
             path: path,
             op: op.toUpperCase(),
@@ -352,8 +350,8 @@ EachCondCondition
     }
 
 ListCondition
-    = path:Path blk op:( "IN"i / "NIN"i ) blk "(" _ head:Value tail:(_ "," _ val:Value { return val; })* _ ")" { 
-        return {
+  = path:Path blk op:( "IN"i / "NIN"i ) blk "(" _ head:Value tail:(_ "," _ val:Value { return val; })* _ ")" { 
+          return {
             type: "list_cond",
             path: path,
             op: op.toUpperCase(),
@@ -362,7 +360,7 @@ ListCondition
     }
 
 LikeCondition
-    = path:Path blk "LIKE"i blk regex:String { 
+  = path:Path blk "LIKE"i blk regex:String { 
         return {
             type: "like_cond",
             path: path,
@@ -371,16 +369,16 @@ LikeCondition
     }
   
 IsNullCondition
-    = path:Path blk "IS"i blk "NULL"i { 
-        return {
+  = path:Path blk "IS"i blk "NULL"i { 
+          return {
             type: "is_null_cond",
             path: path
         };
     }
 
 BinaryExprCondition
-    = lhe:Expression _ op:( "<=" / "<" / ">=" / ">" / "!=" / "=" ) _ rhe:Expression { 
-        return {
+  = lhe:Expression _ op:( "<=" / "<" / ">=" / ">" / "!=" / "=" ) _ rhe:Expression { 
+          return {
             type: "binary_expr_cond",
             lhe: lhe,
             op: op,
@@ -390,65 +388,65 @@ BinaryExprCondition
 
 // EXPRESSIONS
 Expression
-    = AddExpression
+  = AddExpression
 
 AddExpression
-    = head:MulExpression tail:(_ op:( "+" / "-" ) _ expr:MulExpression { return { op:op, val: expr}; })* { 
-        return parse_op_repetition("nary_expr_expr", head, tail);
-    }
+  = head:MulExpression tail:(_ op:( "+" / "-" ) _ expr:MulExpression { return { op:op, val: expr}; })* { 
+      return parse_op_repetition("nary_expr_expr", head, tail);
+  }
   
 MulExpression
-    = head:BaseExpression tail:(_ op:( "*" / "/" ) _ expr:BaseExpression { return { op:op, val: expr}; })* { 
-        return parse_op_repetition("nary_expr_expr", head, tail);
-    }
+  = head:BaseExpression tail:(_ op:( "*" / "/" ) _ expr:BaseExpression { return { op:op, val: expr}; })* { 
+      return parse_op_repetition("nary_expr_expr", head, tail);
+  }
       
 BaseExpression
-    = ReducedExpression
-    / Value
-    / Path 
-    / "("_ expr:Expression _ ")" {
-        return expr;
-    }
+  = ReducedExpression
+  / Value
+  / Path 
+  / "("_ expr:Expression _ ")" {
+      return expr;
+  }
 
 ReducedExpression
-    = "ARRAY_" op:("SUM"i / "AVG"i / "MIN"i / "MAX"i / "COUNT"i) _ "(" _ path:Path query:(_ "," _ LimitedQuery)? _ ")" {
-        return {
-            type: "reduced_expr",
-            path: path,
-            query: query ? query[3] : null
-        };
-    }
+  = "ARRAY_" op:("SUM"i / "AVG"i / "MIN"i / "MAX"i / "COUNT"i) _ "(" _ path:Path query:(_ "," _ LimitedQuery)? _ ")" {
+      return {
+          type: "reduced_expr",
+          path: path,
+          query: query ? query[3] : null
+      };
+  }
 
 Path
-    = head:IndexedKeyName tail:("." val:IndexedKeyName { return val; })* { 
-        return {
-            type: "path",
-            value: [head].concat(tail)
-        };
-    }
+  = head:IndexedKeyName tail:("." val:IndexedKeyName { return val; })* { 
+      return {
+          type: "path",
+          value: [head].concat(tail)
+      };
+  }
 
 IndexedKeyName
-    = key:KeyName idx:(ArrayIndex)? {
-        return {
-            key: key,
-            index: idx 
-        };
-    }
+  = key:KeyName idx:(ArrayIndex)? {
+      return {
+          key: key,
+          index: idx 
+      };
+  }
 
 ArrayIndex
-    = "[" _ index:([0-9]+) _ "]" {
-        return parseInt(index.join(""), 10);
-    }
+  = "[" _ index:([0-9]+) _ "]" {
+      return parseInt(index.join(""), 10);
+  }
 
 Value
-    = String 
-    / Boolean 
-    / Number 
-    / Date 
-    / Timestamp
+  = String 
+  / Boolean 
+  / Number 
+  / Date 
+  / Timestamp
 
 Timestamp
-    = "TIMESTAMP"i blk "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) " " hour:(digit digit) ":" minutes:(digit digit) ":" seconds:(digit digit) "\"" { 
+  = "TIMESTAMP"i blk "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) " " hour:(digit digit) ":" minutes:(digit digit) ":" seconds:(digit digit) "\"" { 
         return {
             type: "timestamp",
             value: new Date(
@@ -463,7 +461,7 @@ Timestamp
     }
 
 Date
-    = "DATE"i blk "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) "\"" { 
+  = "DATE"i blk "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) "\"" { 
         return {
             type: "date",
             value: new Date(
@@ -475,10 +473,10 @@ Date
     }
 
 digit
-    = [0-9]
+  = [0-9]
 
 Boolean
-    = ("TRUE"i / "FALSE"i) { 
+  = ("TRUE"i / "FALSE"i) { 
         return {
             type: "value",
             value: text().toUpperCase() === "TRUE" 
@@ -486,37 +484,37 @@ Boolean
     }
 
 String
-    = "\"" val:[^"]* "\"" { 
-        return {
+  = "\"" val:[^"]* "\"" { 
+          return {
             type: "string",
             value: val.join("")
         };
     }
 
 Number
-    = Integer 
-    / Float
+  = Integer 
+  / Float
 
 Float
-    = ("-"/"+")?[0-9]+("."[0-9]+)? { 
-        return {
+  = ("-"/"+")?[0-9]+("."[0-9]+)? { 
+          return {
             type: "float",
             value: parseFloat(text())
         };
     }
 
 Integer
-    = ("-"/"+")?[0-9]+ { 
-        return {
+  = ("-"/"+")?[0-9]+ { 
+          return {
             type: "integer",
             value: parseInt(text(), 10)
         };
     }
 
 KeyName
-    = [a-zA-Z0-9_-]+ {
+  = [a-zA-Z0-9_-]+ {
         return text();
-    }
+  }
  
 blk
     = [ \t\n\r]+
