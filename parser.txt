@@ -34,7 +34,12 @@
 
 // QUERY
 Query
-  = sub:SubQuery 
+  = select:SelectStatement 
+  _ from:FromStatement 
+  unnest:(_ UnNestStatement)* 
+  where:(_ WhereStatement)? 
+  first_skip:(_ SkipStatement)? 
+  first_limit:(_ LimitStatement)?
   group_by:(_ GroupByStatement)? 
   having:(_ HavingStatement)? 
   order_by:(_ OrderByStatement)? 
@@ -42,7 +47,12 @@ Query
   limit:(_ LimitStatement)? {
       return {
           type: "query",
-          sub: sub,
+          select: select,
+          from: from,
+          unnests: unnest.map(function (item) { return item[1]; }),
+          where: where ? where[1] : undefined,
+          first_skip: first_skip ? first_skip[1] : undefined,
+          first_limit: first_limit ? first_limit[1] : undefined,
           group_by: group_by ? group_by[1] : undefined,
           having: having ? having[1] : undefined,
           order_by: order_by ? order_by[1] : undefined,
@@ -50,45 +60,59 @@ Query
           limit: limit ? limit[1] : undefined
       };
   }
+  /
+  "(" _ Query _ ")"
 
-SubQuery 
-  = select:SelectStatement 
-  _ from:FromStatement 
+LimitedQuery 
+  =  select:SelectStatement 
+  _ from:LimitedFromStatement 
   unnest:(_ UnNestStatement)* 
   where:(_ WhereStatement)? 
   skip:(_ SkipStatement)? 
-  limit:(_ LimitStatement)? {
+  limit:(_ LimitStatement)?
+  concat:(_ ConcatStatement)? {
       return {
-          type: "sub_query",
+          type: "limited_query",
           select: select,
           from: from,
           unnests: unnest.map(function (item) { return item[1]; }),
           where: where ? where[1] : undefined,
           skip: skip ? skip[1] : undefined,
-          limit: limit ? limit[1] : undefined
+          limit: limit ? limit[1] : undefined,
+          concat: concat ? concat[1] : undefined
       };
   }
+  /
+  "(" _ LimitedQuery _ ")"
 
-ExpressionSubQuery
-  = (sub:SubQuery
-  op:(_ ("UNION"i / "INTERSECT"i / "EXCEPT"i) (_ "ALL"i)? _ ExpressionSubQuery)?) {
-     if (op) {
-         return {
-             type: "expr_sub_query",
-             lhq: sub,
-             op: op[1].toUpperCase(),
-             op_modifier: op[2] ? op[2][1].toUpperCase() : undefined,
-             rhq: op[4]
-         };
-     } else {
-         return sub;
-     }
+SingleSelectLimitedQuery 
+  =  select:SingleSelectStatement 
+  _ from:LimitedFromStatement 
+  unnest:(_ UnNestStatement)* 
+  where:(_ WhereStatement)? 
+  skip:(_ SkipStatement)? 
+  limit:(_ LimitStatement)?
+  concat:(_ ConcatStatement)? {
+      return {
+          type: "single_select_limited_query",
+          select: select,
+          from: from,
+          unnests: unnest.map(function (item) { return item[1]; }),
+          where: where ? where[1] : undefined,
+          skip: skip ? skip[1] : undefined,
+          limit: limit ? limit[1] : undefined,
+          concat: concat ? concat[1] : undefined
+      };
   }
-  / "(" _ sub:ExpressionSubQuery _ ")" {
-      return sub;
-  }
+  /
+  "(" _ SingleSelectLimitedQuery _ ")"
   
 // STATEMENTS
+SingleSelectStatement
+  = "SELECT"i _ expr:Expression {
+      return expr;
+  }
+
 SelectStatement
   = "SELECT"i _ map:(SelectMapping / SimplifiedSelectMapping) {
       return {
@@ -114,7 +138,7 @@ SimplifiedSelectMapping
   }
 
 SelectMapping 
-  = "{" _ key:KeyName _ ":" _ expr:(ExpressionSubQuery / Expression) tail:(_ "," _ KeyName _ ":" _ (ExpressionSubQuery / Expression))* _ "}" { 
+  = "{" _ key:KeyName _ ":" _ expr:(LimitedQuery / SelectMapping / Expression ) tail:(_ "," _ KeyName _ ":" _ (LimitedQuery / SelectMapping / Expression))* _ "}" { 
         return {
         	type: "select_mapping",
         	map: parse_mapping(key, expr, tail, 3, 7)
@@ -122,11 +146,20 @@ SelectMapping
     }
 
 FromStatement
-  = "FROM"i _ arr:(Path / ExpressionSubQuery) alias:(_ "AS"i _ KeyName)? {
+  = "FROM"i _ from:(Path / Query) alias:(_ "AS"i _ KeyName)? {
       return {
           type: "from_stat",
           alias: alias ? alias[3] : undefined,
-          arr: arr
+          from: from
+      };
+  }
+
+LimitedFromStatement
+  = "FROM"i _ from:(Path / LimitedQuery) alias:(_ "AS"i _ KeyName)? {
+      return {
+          type: "from_stat",
+          alias: alias ? alias[3] : undefined,
+          from: from
       };
   }
 
@@ -144,6 +177,16 @@ WhereStatement
           type: "where_stat",
           cond: cond
       };
+  }
+
+ConcatStatement
+  = op:("UNION"i / "INTERSECT"i / "EXCEPT"i) mod:(_ "ALL"i)? _ query:LimitedQuery {
+     return {
+         type: "concat_stat",
+         op: op[1].toUpperCase(),
+         mod: mod ? mod[1].toUpperCase() : undefined,
+         query: query
+     };
   }
 
 GroupByStatement
@@ -277,14 +320,13 @@ BinaryExprCondition
   
 // EXPRESSIONS
 Expression
-  = ReducedExpression 
-  / AddExpression
+  = ReducedExpression / AddExpression
 
 ReducedExpression
-  = op:("SUM"i / "AVG"i / "COUNT"i / "MIN"i / "MAX"i) _ "(" _ expr:(ExpressionSubQuery / Expression) _ ")" {
+  = op:("SUM"i / "AVG"i / "MIN"i / "MAX"i / "COUNT"i) _ "(" _ val:(SingleSelectLimitedQuery / Path) _ ")" {
       return {
           type: "reduced_expr",
-          expr: expr
+          value: val
       };
   }
 
@@ -306,12 +348,25 @@ BaseExpression
   }
 
 Path
-  = KeyName ("." KeyName)* { 
+  = key:KeyName idx:(ArrayIndex)? tail:("." KeyName (ArrayIndex)?)* { 
           return {
             type: "path",
-            value: text() 
-        }
+            value: [{
+                key: key,
+                index: idx
+            }].concat(tail.map(function (item) {
+                return {
+                    key: tail[1],
+                    index: tail[2] ? tail[2][0] : undefined
+                };
+            }))
+        };
     }
+
+ArrayIndex
+  = "[" _ index:([0-9]+) _ "]" {
+      return index.join("");
+  }
 
 Value
   = String 
@@ -379,7 +434,7 @@ Float
     }
 
 Integer
-  = [0-9]+ { 
+  = ("-"/"+")?[0-9]+ { 
           return {
             type: "integer",
             value: parseInt(text(), 10)
