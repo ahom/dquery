@@ -34,245 +34,245 @@
 
 // QUERY
 Query
-  = select:SelectStatement 
-  _ from:FromStatement 
-  unnest:(_ UnNestStatement)* 
-  where:(_ WhereStatement)? 
-  first_skip:(_ SkipStatement)? 
-  first_limit:(_ LimitStatement)?
-  group_by:(_ GroupByStatement)? 
-  having:(_ HavingStatement)? 
-  order_by:(_ OrderByStatement)? 
-  skip:(_ SkipStatement)? 
-  limit:(_ LimitStatement)? {
-      return {
-          type: "query",
-          select: select,
-          from: from,
-          unnests: unnest.map(function (item) { return item[1]; }),
-          where: where ? where[1] : undefined,
-          first_skip: first_skip ? first_skip[1] : undefined,
-          first_limit: first_limit ? first_limit[1] : undefined,
-          group_by: group_by ? group_by[1] : undefined,
-          having: having ? having[1] : undefined,
-          order_by: order_by ? order_by[1] : undefined,
-          skip: skip ? skip[1] : undefined,
-          limit: limit ? limit[1] : undefined
-      };
-  }
-  /
-  "(" _ Query _ ")"
+    = select:SelectStatement 
+    _ from:FromStatement 
+    unnest:(_ UnNestStatement)* 
+    where:(_ WhereStatement)? 
+    first_skip:(_ SkipStatement)? 
+    first_limit:(_ LimitStatement)?
+    group_by:(_ GroupByStatement)? 
+    having:(_ HavingStatement)? 
+    order_by:(_ OrderByStatement)? 
+    skip:(_ SkipStatement)? 
+    limit:(_ LimitStatement)? {
+        return {
+            type: "query",
+            select: select,
+            from: from,
+            unnests: unnest.map(function (item) { return item[1]; }),
+            where: where ? where[1] : undefined,
+            first_skip: first_skip ? first_skip[1] : undefined,
+            first_limit: first_limit ? first_limit[1] : undefined,
+            group_by: group_by ? group_by[1] : undefined,
+            having: having ? having[1] : undefined,
+            order_by: order_by ? order_by[1] : undefined,
+            skip: skip ? skip[1] : undefined,
+            limit: limit ? limit[1] : undefined
+        };
+    }
+    /
+    "(" _ Query _ ")"
 
 LimitedQuery 
-  =  select:SelectStatement 
-  _ from:LimitedFromStatement 
-  unnest:(_ UnNestStatement)* 
-  where:(_ WhereStatement)? 
-  skip:(_ SkipStatement)? 
-  limit:(_ LimitStatement)?
-  concat:(_ ConcatStatement)? {
-      return {
-          type: "limited_query",
-          select: select,
-          from: from,
-          unnests: unnest.map(function (item) { return item[1]; }),
-          where: where ? where[1] : undefined,
-          skip: skip ? skip[1] : undefined,
-          limit: limit ? limit[1] : undefined,
-          concat: concat ? concat[1] : undefined
-      };
-  }
-  /
-  "(" _ LimitedQuery _ ")"
+    =  select:SelectStatement 
+    _ from:LimitedFromStatement 
+    unnest:(_ UnNestStatement)* 
+    where:(_ WhereStatement)? 
+    skip:(_ SkipStatement)? 
+    limit:(_ LimitStatement)?
+    concat:(_ ConcatStatement)? {
+        return {
+            type: "limited_query",
+            select: select,
+            from: from,
+            unnests: unnest.map(function (item) { return item[1]; }),
+            where: where ? where[1] : undefined,
+            skip: skip ? skip[1] : undefined,
+            limit: limit ? limit[1] : undefined,
+            concat: concat ? concat[1] : undefined
+        };
+    }
+    /
+    "(" _ LimitedQuery _ ")"
 
 SingleSelectLimitedQuery 
-  =  select:SingleSelectStatement 
-  _ from:LimitedFromStatement 
-  unnest:(_ UnNestStatement)* 
-  where:(_ WhereStatement)? 
-  skip:(_ SkipStatement)? 
-  limit:(_ LimitStatement)?
-  concat:(_ ConcatStatement)? {
-      return {
-          type: "single_select_limited_query",
-          select: select,
-          from: from,
-          unnests: unnest.map(function (item) { return item[1]; }),
-          where: where ? where[1] : undefined,
-          skip: skip ? skip[1] : undefined,
-          limit: limit ? limit[1] : undefined,
-          concat: concat ? concat[1] : undefined
-      };
-  }
-  /
-  "(" _ SingleSelectLimitedQuery _ ")"
-  
+    =  select:SingleSelectStatement 
+    _ from:LimitedFromStatement 
+    unnest:(_ UnNestStatement)* 
+    where:(_ WhereStatement)? 
+    skip:(_ SkipStatement)? 
+    limit:(_ LimitStatement)?
+    concat:(_ ConcatStatement)? {
+        return {
+            type: "single_select_limited_query",
+            select: select,
+            from: from,
+            unnests: unnest.map(function (item) { return item[1]; }),
+            where: where ? where[1] : undefined,
+            skip: skip ? skip[1] : undefined,
+            limit: limit ? limit[1] : undefined,
+            concat: concat ? concat[1] : undefined
+        };
+    }
+    /
+    "(" _ SingleSelectLimitedQuery _ ")"
+    
 // STATEMENTS
 SingleSelectStatement
-  = "SELECT"i _ expr:Expression {
-      return expr;
-  }
+    = "SELECT"i _ expr:Expression {
+        return expr;
+    }
 
 SelectStatement
-  = "SELECT"i _ map:(SelectMapping / SimplifiedSelectMapping) {
-      return {
-          type: "select_stat",
-          map: map
-      };
-  }
+    = "SELECT"i _ map:(SelectMapping / SimplifiedSelectMapping) {
+        return {
+            type: "select_stat",
+            map: map
+        };
+    }
 
 SimplifiedSelectMapping
-  = expr:Expression alias:(_ "AS"i _ KeyName)? tail:(_ "," _ Expression (_ "AS"i _ KeyName)?)* {
-     return {
-         type: "simplified_select_mapping",
-         map: [{
-             expr: expr,
-             alias: alias ? alias[3] : undefined
-         }].concat(tail.map(function (item) {
-             return {
-                 expr: item[3],
-                 alias: item[4] ? item[4][3] : undefined
-             };
-         }))
-     };
-  }
+    = expr:Expression alias:(_ "AS"i _ KeyName)? tail:(_ "," _ Expression (_ "AS"i _ KeyName)?)* {
+       return {
+           type: "simplified_select_mapping",
+           map: [{
+               expr: expr,
+               alias: alias ? alias[3] : undefined
+           }].concat(tail.map(function (item) {
+               return {
+                   expr: item[3],
+                   alias: item[4] ? item[4][3] : undefined
+               };
+           }))
+       };
+    }
 
 SelectMapping 
-  = "{" _ key:KeyName _ ":" _ expr:(LimitedQuery / SelectMapping / Expression ) tail:(_ "," _ KeyName _ ":" _ (LimitedQuery / SelectMapping / Expression))* _ "}" { 
+    = "{" _ key:KeyName _ ":" _ expr:(LimitedQuery / SelectMapping / Expression ) tail:(_ "," _ KeyName _ ":" _ (LimitedQuery / SelectMapping / Expression))* _ "}" { 
         return {
-        	type: "select_mapping",
-        	map: parse_mapping(key, expr, tail, 3, 7)
+            type: "select_mapping",
+            map: parse_mapping(key, expr, tail, 3, 7)
         };
     }
 
 FromStatement
-  = "FROM"i _ from:(Path / Query) alias:(_ "AS"i _ KeyName)? {
-      return {
-          type: "from_stat",
-          alias: alias ? alias[3] : undefined,
-          from: from
-      };
-  }
+    = "FROM"i _ from:(Path / Query) alias:(_ "AS"i _ KeyName)? {
+        return {
+            type: "from_stat",
+            alias: alias ? alias[3] : undefined,
+            from: from
+        };
+    }
 
 LimitedFromStatement
-  = "FROM"i _ from:(Path / LimitedQuery) alias:(_ "AS"i _ KeyName)? {
-      return {
-          type: "from_stat",
-          alias: alias ? alias[3] : undefined,
-          from: from
-      };
-  }
+    = "FROM"i _ from:(Path / LimitedQuery) alias:(_ "AS"i _ KeyName)? {
+        return {
+            type: "from_stat",
+            alias: alias ? alias[3] : undefined,
+            from: from
+        };
+    }
 
 UnNestStatement
-  = "UNNEST"i _ path:Path {
-      return {
-          type: "unnest_stat",
-          path: path
-      };
-  }
+    = "UNNEST"i _ path:Path {
+        return {
+            type: "unnest_stat",
+            path: path
+        };
+    }
 
 WhereStatement
-  = "WHERE"i _ cond:Condition {
-      return {
-          type: "where_stat",
-          cond: cond
-      };
-  }
+    = "WHERE"i _ cond:Condition {
+        return {
+            type: "where_stat",
+            cond: cond
+        };
+    }
 
 ConcatStatement
-  = op:("UNION"i / "INTERSECT"i / "EXCEPT"i) mod:(_ "ALL"i)? _ query:LimitedQuery {
-     return {
-         type: "concat_stat",
-         op: op[1].toUpperCase(),
-         mod: mod ? mod[1].toUpperCase() : undefined,
-         query: query
-     };
-  }
+    = op:("UNION"i / "INTERSECT"i / "EXCEPT"i) mod:(_ "ALL"i)? _ query:LimitedQuery {
+        return {
+            type: "concat_stat",
+            op: op[1].toUpperCase(),
+            mod: mod ? mod[1].toUpperCase() : undefined,
+            query: query
+        };
+    }
 
 GroupByStatement
-  = "GROUP"i _ "BY"i _ head:Expression tail:(_ "," _ Expression)* {
-      return {
-          type: "group_by_stat",
-          exprs: [head].concat(tail.map(function (item) { return item[3]; }))
-      };
-  }
+    = "GROUP"i _ "BY"i _ head:Expression tail:(_ "," _ Expression)* {
+        return {
+            type: "group_by_stat",
+            exprs: [head].concat(tail.map(function (item) { return item[3]; }))
+        };
+    }
 
 HavingStatement
-  = "HAVING"i _ cond:Condition {
-      return {
-          type: "having_stat",
-          cond: cond
-      };
-  }
+    = "HAVING"i _ cond:Condition {
+        return {
+            type: "having_stat",
+            cond: cond
+        };
+    }
 
 OrderByStatement
-  = "ORDER"i _ "BY"i _ head:(Expression (_ "ASC"i / "DESC"i)?) tail:(_ "," _ Expression (_ "ASC"i / "DESC"i)?)* {
-      return {
-          type: "order_by_stat",
-          orders: [{
-              expr: head[0],
-              order: head[1] ? head[1][1].toUpperCase() : "ASC"
-          }].concat(tail.map(function (item) {
-              return {
-                  expr: item[3],
-                  order: item[4] ? item[4][1].toUpperCase() : "ASC"
-              };
-          }))
-      };
-  }
+    = "ORDER"i _ "BY"i _ head:(Expression (_ "ASC"i / "DESC"i)?) tail:(_ "," _ Expression (_ "ASC"i / "DESC"i)?)* {
+        return {
+            type: "order_by_stat",
+            orders: [{
+                expr: head[0],
+                order: head[1] ? head[1][1].toUpperCase() : "ASC"
+            }].concat(tail.map(function (item) {
+                return {
+                    expr: item[3],
+                    order: item[4] ? item[4][1].toUpperCase() : "ASC"
+                };
+            }))
+        };
+    }
 
 SkipStatement
-  = "SKIP"i _ val:Integer {
-      return {
-          type: "skip_stat",
-          value: val
-      };
-  }
-  
+    = "SKIP"i _ val:Integer {
+        return {
+            type: "skip_stat",
+            value: val
+        };
+    }
+    
 LimitStatement
-  = "LIMIT"i _ val:Integer {
-      return {
-          type: "limit_stat",
-          value: val
-      };
-  }
+    = "LIMIT"i _ val:Integer {
+        return {
+            type: "limit_stat",
+            value: val
+        };
+    }
 
 // CONDITIONS
 Condition
-  = OrCondition
+    = OrCondition
 
 OrCondition
-  = head:AndCondition tail:(_ "OR"i _ AndCondition)* { 
-          return parse_repetition("nary_cond_cond", "conds", head, tail, 1, 3);
+    = head:AndCondition tail:(_ "OR"i _ AndCondition)* { 
+        return parse_repetition("nary_cond_cond", "conds", head, tail, 1, 3);
     }
 
 AndCondition
-  = head:BaseCondition tail:(_ "AND"i _ BaseCondition)* { 
-          return parse_repetition("nary_cond_cond", "conds", head, tail, 1, 3);
+    = head:BaseCondition tail:(_ "AND"i _ BaseCondition)* { 
+        return parse_repetition("nary_cond_cond", "conds", head, tail, 1, 3);
     }
 
 BaseCondition
-  = IsNullCondition 
-  / BinaryExprCondition 
-  / EachCondCondition 
-  / ListCondition 
-  / LikeCondition 
-  / NotCondition 
-  / "(" _ cond:Condition _ ")" { 
-          return cond;
+    = IsNullCondition 
+    / BinaryExprCondition 
+    / EachCondCondition 
+    / ListCondition 
+    / LikeCondition 
+    / NotCondition 
+    / "(" _ cond:Condition _ ")" { 
+        return cond;
     }
 
 NotCondition
-  = "NOT"i _ cond:BaseCondition { 
-          return {
+    = "NOT"i _ cond:BaseCondition { 
+        return {
             type: "not_cond",
             cond: cond
         };
     }
 
 EachCondCondition
-  = op:("ANY"i / "ALL"i) _ path:Path _ "MATCH"i _ cond:BaseCondition { 
-          return {
+    = op:("ANY"i / "ALL"i) _ path:Path _ "MATCH"i _ cond:BaseCondition { 
+        return {
             type: "each_cond_cond",
             path: path,
             op: op.toUpperCase(),
@@ -281,8 +281,8 @@ EachCondCondition
     }
 
 ListCondition
-  = path:Path _ op:( "IN"i / "NIN"i ) _ "(" _ head:Value tail:(_ "," _ Value)* _ ")" { 
-          return {
+    = path:Path _ op:( "IN"i / "NIN"i ) _ "(" _ head:Value tail:(_ "," _ Value)* _ ")" { 
+        return {
             type: "list_cond",
             path: path,
             op: op.toUpperCase(),
@@ -291,65 +291,65 @@ ListCondition
     }
 
 LikeCondition
-  = path:Path _ "LIKE"i _ regex:String { 
+    = path:Path _ "LIKE"i _ regex:String { 
         return {
             type: "like_cond",
             path: path,
             regex: regex
         };
     }
-  
+    
 IsNullCondition
-  = path:Path _ "IS"i _ "NULL"i { 
-          return {
+    = path:Path _ "IS"i _ "NULL"i { 
+        return {
             type: "is_null_cond",
             path: path
         };
     }
 
 BinaryExprCondition
-  = lhe:Expression _ op:( "<=" / "<" / ">=" / ">" / "!=" / "=" ) _ rhe:Expression { 
-          return {
+    = lhe:Expression _ op:( "<=" / "<" / ">=" / ">" / "!=" / "=" ) _ rhe:Expression { 
+        return {
             type: "binary_expr_cond",
             lhe: lhe,
             op: op,
             rhe: rhe
         };
     }
-
-  
+    
 // EXPRESSIONS
 Expression
-  = ReducedExpression / AddExpression
+    = ReducedExpression 
+    / AddExpression
 
 ReducedExpression
-  = op:("SUM"i / "AVG"i / "MIN"i / "MAX"i / "COUNT"i) _ "(" _ val:(SingleSelectLimitedQuery / Path) _ ")" {
-      return {
-          type: "reduced_expr",
-          value: val
-      };
-  }
+    = op:("SUM"i / "AVG"i / "MIN"i / "MAX"i / "COUNT"i) _ "(" _ val:(SingleSelectLimitedQuery / Path) _ ")" {
+        return {
+            type: "reduced_expr",
+            value: val
+        };
+    }
 
 AddExpression
-  = head:MulExpression tail:(_ ( "+" / "-" ) _ MulExpression)* { 
-          return parse_repetition("nary_expr_expr", "exprs", head, tail, 1, 3);
+    = head:MulExpression tail:(_ ( "+" / "-" ) _ MulExpression)* { 
+        return parse_repetition("nary_expr_expr", "exprs", head, tail, 1, 3);
     }
-  
+    
 MulExpression
-  = head:BaseExpression tail:(_ ( "*" / "/" ) _ BaseExpression)* { 
-          return parse_repetition("nary_expr_expr", "exprs", head, tail, 1, 3);
+    = head:BaseExpression tail:(_ ( "*" / "/" ) _ BaseExpression)* { 
+        return parse_repetition("nary_expr_expr", "exprs", head, tail, 1, 3);
     }
-      
+        
 BaseExpression
-  = Value 
-  / Path 
-  / "("_ expr:Expression _ ")" {
-      return expr;
-  }
+    = Value 
+    / Path 
+    / "("_ expr:Expression _ ")" {
+        return expr;
+    }
 
 Path
-  = key:KeyName idx:(ArrayIndex)? tail:("." KeyName (ArrayIndex)?)* { 
-          return {
+    = key:KeyName idx:(ArrayIndex)? tail:("." KeyName (ArrayIndex)?)* { 
+        return {
             type: "path",
             value: [{
                 key: key,
@@ -364,19 +364,19 @@ Path
     }
 
 ArrayIndex
-  = "[" _ index:([0-9]+) _ "]" {
-      return index.join("");
-  }
+    = "[" _ index:([0-9]+) _ "]" {
+        return index.join("");
+    }
 
 Value
-  = String 
-  / Boolean 
-  / Number 
-  / Date 
-  / Timestamp
+    = String 
+    / Boolean 
+    / Number 
+    / Date 
+    / Timestamp
 
 Timestamp
-  = "TIMESTAMP"i _ "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) " " hour:(digit digit) ":" minutes:(digit digit) ":" seconds:(digit digit) "\"" { 
+    = "TIMESTAMP"i _ "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) " " hour:(digit digit) ":" minutes:(digit digit) ":" seconds:(digit digit) "\"" { 
         return {
             type: "timestamp",
             value: new Date(
@@ -391,7 +391,7 @@ Timestamp
     }
 
 Date
-  = "DATE"i _ "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) "\"" { 
+    = "DATE"i _ "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) "\"" { 
         return {
             type: "date",
             value: new Date(
@@ -403,10 +403,10 @@ Date
     }
 
 digit
-  = [0-9]
+    = [0-9]
 
 Boolean
-  = ("TRUE"i / "FALSE"i) { 
+    = ("TRUE"i / "FALSE"i) { 
         return {
             type: "value",
             value: text().toUpperCase() === "TRUE" 
@@ -414,7 +414,7 @@ Boolean
     }
 
 String
-  = "\"" val:[^"]* "\"" { 
+    = "\"" val:[^"]* "\"" { 
           return {
             type: "string",
             value: val.join("")
@@ -422,29 +422,30 @@ String
     }
 
 Number
-  = Integer 
-  / Float
+    = Integer 
+    / Float
 
 Float
-  = ("-"/"+")?[0-9]+("."[0-9]+)? { 
-          return {
+    = ("-"/"+")?[0-9]+("."[0-9]+)? { 
+        return {
             type: "float",
             value: parseFloat(text())
         };
     }
 
 Integer
-  = ("-"/"+")?[0-9]+ { 
-          return {
+    = ("-"/"+")?[0-9]+ { 
+        return {
             type: "integer",
             value: parseInt(text(), 10)
         };
     }
 
 KeyName
-  = [a-zA-Z0-9_-]+ {
+    = [a-zA-Z0-9_-]+ {
         return text();
-  }
-  
+    }
+    
 _ "whitespace"
-  = [ \t\n\r]*
+    = [ \t\n\r]*
+
