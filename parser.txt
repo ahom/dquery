@@ -1,11 +1,11 @@
 {
     function parse_repetition(name, expr_name, head, tail, op_idx, expr_idx) { 
-          if (tail.length === 0) {
+        if (tail.length === 0) {
             return head;
         }
         let rv = null;
         tail.map(function (item) {
-            if (rv !== null && item[op_idx] === rv.op) {
+            if (rv !== null && item[op_idx].toUpperCase() === rv.op) {
                 rv[expr_name].push(item[expr_idx]);
             } else {
                 if (rv === null) {
@@ -13,13 +13,13 @@
                 }
                 let next_rv = {
                     type: name,
-                    op: item[op_idx]
+                    op: item[op_idx].toUpperCase()
                 };
                 next_rv[expr_name] = [rv, item[expr_idx]];
                 rv = next_rv;
             }
         });
-          return rv;
+        return rv;
     }
     
     function parse_mapping(key, expr, tail, key_idx, expr_idx) {
@@ -34,93 +34,165 @@
 
 // QUERY
 Query
-  = ops:(_ Operation)+ _ { 
+  = sub:SubQuery 
+  group_by:(_ GroupByStatement)? 
+  having:(_ HavingStatement)? 
+  order_by:(_ OrderByStatement)? 
+  skip:(_ SkipStatement)? 
+  limit:(_ LimitStatement)? {
+      return {
+          type: "query",
+          sub: sub,
+          group_by: group_by ? group_by[1] : undefined,
+          having: having ? having[1] : undefined,
+          order_by: order_by ? order_by[1] : undefined,
+          skip: skip ? skip[1] : undefined,
+          limit: limit ? limit[1] : undefined
+      };
+  }
+
+SubQuery 
+  = select:SelectStatement 
+  _ from:FromStatement 
+  unnest:(_ UnNestStatement)* 
+  where:(_ WhereStatement)? 
+  skip:(_ SkipStatement)? 
+  limit:(_ LimitStatement)? {
+      return {
+          type: "sub_query",
+          select: select,
+          from: from,
+          unnests: unnest.map(function (item) { return item[1]; }),
+          where: where ? where[1] : undefined,
+          skip: skip ? skip[1] : undefined,
+          limit: limit ? limit[1] : undefined
+      };
+  }
+
+ExpressionSubQuery
+  = (sub:SubQuery
+  op:(_ ("UNION"i / "INTERSECT"i / "EXCEPT"i) (_ "ALL"i)? _ ExpressionSubQuery)?) {
+     if (op) {
+         return {
+             type: "expr_sub_query",
+             lhq: sub,
+             op: op[1].toUpperCase(),
+             op_modifier: op[2] ? op[2][1].toUpperCase() : undefined,
+             rhq: op[4]
+         };
+     } else {
+         return sub;
+     }
+  }
+  / "(" _ sub:ExpressionSubQuery _ ")" {
+      return sub;
+  }
+  
+// STATEMENTS
+SelectStatement
+  = "SELECT"i _ map:(SelectMapping / SimplifiedSelectMapping) {
+      return {
+          type: "select_stat",
+          map: map
+      };
+  }
+
+SimplifiedSelectMapping
+  = expr:Expression alias:(_ "AS"i _ KeyName)? tail:(_ "," _ Expression (_ "AS"i _ KeyName)?)* {
+     return {
+         type: "simplified_select_mapping",
+         map: [{
+             expr: expr,
+             alias: alias ? alias[3] : undefined
+         }].concat(tail.map(function (item) {
+             return {
+                 expr: item[3],
+                 alias: item[4] ? item[4][3] : undefined
+             };
+         }))
+     };
+  }
+
+SelectMapping 
+  = "{" _ key:KeyName _ ":" _ expr:(ExpressionSubQuery / Expression) tail:(_ "," _ KeyName _ ":" _ (ExpressionSubQuery / Expression))* _ "}" { 
         return {
-            type: "query",
-            ops: ops.map(function (op) { return op[1]; })
-        }
+        	type: "select_mapping",
+        	map: parse_mapping(key, expr, tail, 3, 7)
+        };
     }
 
-// OPERATIONS
-Operation
-  = ReduceOp / MapOp / FilterOp / ConcatOp / LimitOp / SkipOp
+FromStatement
+  = "FROM"i _ arr:(Path / ExpressionSubQuery) alias:(_ "AS"i _ KeyName)? {
+      return {
+          type: "from_stat",
+          alias: alias ? alias[3] : undefined,
+          arr: arr
+      };
+  }
 
-ReduceOp
-  = "REDUCE"i _ "KEYS"i _ keys:ReduceOpKeysMapping _ "VALUES"i _ values:ReduceOpValuesMapping { 
-        return {
-            type: "reduce_op",
-            keys_mapping: keys,
-            values_mapping: values
-        }
-    }
+UnNestStatement
+  = "UNNEST"i _ path:Path {
+      return {
+          type: "unnest_stat",
+          path: path
+      };
+  }
 
-ReduceOpKeysMapping
-  = "{" _ key:KeyName _ ":" _ expr:Expression tail:(_ "," _ KeyName _ ":" _ Expression)* _ "}" { 
-          return parse_mapping(key, expr, tail, 3, 7);
-    }
+WhereStatement
+  = "WHERE"i _ cond:Condition {
+      return {
+          type: "where_stat",
+          cond: cond
+      };
+  }
 
-ReduceOpValuesMapping
-  = "{" _ key:KeyName _ ":" _ red:ExprReducer tail:(_ "," _ KeyName _ ":" _ ExprReducer)* _ "}" { 
-          return parse_mapping(key, expr, tail, 3, 7);
-    }
+GroupByStatement
+  = "GROUP"i _ "BY"i _ head:Expression tail:(_ "," _ Expression)* {
+      return {
+          type: "group_by_stat",
+          exprs: [head].concat(tail.map(function (item) { return item[3]; }))
+      };
+  }
 
-MapOp
-  = "MAP"i _ mapping:MapOpMapping { 
-        return {
-            type: "map_op",
-            mapping: mapping
-        }
-    }
+HavingStatement
+  = "HAVING"i _ cond:Condition {
+      return {
+          type: "having_stat",
+          cond: cond
+      };
+  }
 
-MapOpMapping
-  = "{" _ key:KeyName _ ":" _ expr:( Expression / ArrayExpr ) tail:(_ "," _ KeyName _ ":" _ ( Expression / ArrayExpr ))* _ "}" {
-        return parse_mapping(key, expr, tail, 3, 7);
-    }
+OrderByStatement
+  = "ORDER"i _ "BY"i _ head:(Expression (_ "ASC"i / "DESC"i)?) tail:(_ "," _ Expression (_ "ASC"i / "DESC"i)?)* {
+      return {
+          type: "order_by_stat",
+          orders: [{
+              expr: head[0],
+              order: head[1] ? head[1][1].toUpperCase() : "ASC"
+          }].concat(tail.map(function (item) {
+              return {
+                  expr: item[3],
+                  order: item[4] ? item[4][1].toUpperCase() : "ASC"
+              };
+          }))
+      };
+  }
 
-ConcatOp
-  = "CONCAT"i _ "[" _ head:Path tail:(_ "," _ Path)* _ "]" { 
-          return {
-            type: "concat_op",
-            paths: [head].concat(tail.map(function (item) { return item[3]; }))
-        }
-    }
-
-FilterOp
-  = "FILTER"i _ cond:Condition { 
-          return {
-            type: "filter_op",
-            cond: cond
-        }
-    }
-
-SkipOp
-  = "SKIP"i _ val:Integer { 
-          return {
-            type: "skip_op",
-            val: val
-        }
-    }
- 
-LimitOp
-  = "LIMIT"i _ val:Integer { 
-          return {
-            type: "limit_op",
-            val: val
-        }
-    }
-
-// REDUCERS
-Reducer
-  = ExprReducer
-
-ExprReducer
-  = op:( "SUM"i / "AVG"i / "COUNT"i / "MIN"i / "MAX"i ) _ expr:Expression { 
-          return {
-            type: "expr_red",
-            op: op.toUpperCase(),
-            expr: expr
-        }
-    }
+SkipStatement
+  = "SKIP"i _ val:Integer {
+      return {
+          type: "skip_stat",
+          value: val
+      };
+  }
+  
+LimitStatement
+  = "LIMIT"i _ val:Integer {
+      return {
+          type: "limit_stat",
+          value: val
+      };
+  }
 
 // CONDITIONS
 Condition
@@ -137,14 +209,22 @@ AndCondition
     }
 
 BaseCondition
-  = ExistsCondition / BinaryExprCondition / EachCondCondition / ListCondition / MatchCondition / NotCondition / "(" _ Condition _ ")"
+  = IsNullCondition 
+  / BinaryExprCondition 
+  / EachCondCondition 
+  / ListCondition 
+  / LikeCondition 
+  / NotCondition 
+  / "(" _ cond:Condition _ ")" { 
+          return cond;
+    }
 
 NotCondition
   = "NOT"i _ cond:BaseCondition { 
           return {
             type: "not_cond",
             cond: cond
-        }
+        };
     }
 
 EachCondCondition
@@ -154,34 +234,34 @@ EachCondCondition
             path: path,
             op: op.toUpperCase(),
             cond: cond
-        }
+        };
     }
 
 ListCondition
-  = path:Path _ op:( "IN"i / "NIN"i ) _ "[" _ head:Value tail:(_ "," _ Value)* _ "]" { 
+  = path:Path _ op:( "IN"i / "NIN"i ) _ "(" _ head:Value tail:(_ "," _ Value)* _ ")" { 
           return {
             type: "list_cond",
             path: path,
             op: op.toUpperCase(),
             values: [head].concat(tail.map(function(item) { return item[3]; }))
-        }
+        };
     }
 
-MatchCondition
-  = path:Path _ "MATCH"i _ regex:String { 
-          return {
-            type: "match_cond",
+LikeCondition
+  = path:Path _ "LIKE"i _ regex:String { 
+        return {
+            type: "like_cond",
             path: path,
             regex: regex
-        }
+        };
     }
   
-ExistsCondition
-  = path:Path _ "EXISTS"i { 
+IsNullCondition
+  = path:Path _ "IS"i _ "NULL"i { 
           return {
-            type: "exists_cond",
+            type: "is_null_cond",
             path: path
-        }
+        };
     }
 
 BinaryExprCondition
@@ -191,32 +271,22 @@ BinaryExprCondition
             lhe: lhe,
             op: op,
             rhe: rhe
-        }
-    }
-  
-// ARRAYEXPR
-ArrayExpr
-  = "FOR"i _ alias:KeyName _ "IN"i _ path:Path ops:(_ ( FilterOp / MapOp ) )* { 
-          return {
-            type: "array_expr",
-            alias: alias,
-            path: path,
-            ops: ops.map(function(op) { return op[1]; })
-        }
+        };
     }
 
+  
 // EXPRESSIONS
 Expression
-  = ReducedExpr / AddExpression 
+  = ReducedExpression 
+  / AddExpression
 
-ReducedExpr
-  = arr:ArrayExpr _ red:ExprReducer { 
-          return {
-            type: "reduced_expr",
-            arr: arr,
-            red: red
-        }
-    }
+ReducedExpression
+  = op:("SUM"i / "AVG"i / "COUNT"i / "MIN"i / "MAX"i) _ "(" _ expr:(ExpressionSubQuery / Expression) _ ")" {
+      return {
+          type: "reduced_expr",
+          expr: expr
+      };
+  }
 
 AddExpression
   = head:MulExpression tail:(_ ( "+" / "-" ) _ MulExpression)* { 
@@ -229,7 +299,9 @@ MulExpression
     }
       
 BaseExpression
-  = Value / Path / "("_ expr:Expression _ ")" {
+  = Value 
+  / Path 
+  / "("_ expr:Expression _ ")" {
       return expr;
   }
 
@@ -242,11 +314,15 @@ Path
     }
 
 Value
-  = String / Boolean / Number / Date / Timestamp
+  = String 
+  / Boolean 
+  / Number 
+  / Date 
+  / Timestamp
 
 Timestamp
   = "TIMESTAMP"i _ "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) " " hour:(digit digit) ":" minutes:(digit digit) ":" seconds:(digit digit) "\"" { 
-          return {
+        return {
             type: "timestamp",
             value: new Date(
                 parseInt(year.join(""), 10), 
@@ -256,19 +332,19 @@ Timestamp
                 parseInt(minutes.join(""), 10),
                 parseInt(seconds.join(""), 10)
             )
-        }
+        };
     }
 
 Date
   = "DATE"i _ "\"" year:(digit digit digit digit) "-" month:(digit digit) "-" day:(digit digit) "\"" { 
-          return {
+        return {
             type: "date",
             value: new Date(
                 parseInt(year.join(""), 10), 
                 parseInt(month.join(""), 10),
                 parseInt(day.join(""), 10)
             )
-        }
+        };
     }
 
 digit
@@ -276,10 +352,10 @@ digit
 
 Boolean
   = ("TRUE"i / "FALSE"i) { 
-          return {
+        return {
             type: "value",
             value: text().toUpperCase() === "TRUE" 
-        }
+        };
     }
 
 String
@@ -287,18 +363,19 @@ String
           return {
             type: "string",
             value: val.join("")
-        }
+        };
     }
 
 Number
-  = Integer / Float
+  = Integer 
+  / Float
 
 Float
   = ("-"/"+")?[0-9]+("."[0-9]+)? { 
           return {
             type: "float",
             value: parseFloat(text())
-        }
+        };
     }
 
 Integer
@@ -306,7 +383,7 @@ Integer
           return {
             type: "integer",
             value: parseInt(text(), 10)
-        }
+        };
     }
 
 KeyName
