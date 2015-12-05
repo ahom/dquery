@@ -1,0 +1,29 @@
+select {
+    tax_type: tax_type,
+    txa: sum(select amount from cpn.txa where type = tax_type limit 2),
+    txo: sum(select amount from cpn.txo where type = tax_type skip 10 limit 20)
+}
+from (
+    select {
+        fraid : fradid,
+        cpnid : cpn.cpnid,
+        tax_type: select type
+            from cpn.txa
+            union all
+            select type
+            from cpn.txo
+            union
+            select type
+            from cpn.txf
+    }
+    from doc
+    unnest cpn
+    where id = 1
+)
+unnest tax_type
+where tax_type in ("LOL", "LIL", "LAL")
+group by tax_type
+having txo > 0 or txa > 0
+order by txa asc, txo
+skip 10
+limit 20
