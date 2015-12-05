@@ -1,7 +1,7 @@
 select {
     tax_type: tax_type,
-    txa: sum(select amount[1] from cpn.txa where type = tax_type limit 2),
-    txo: select avg(amount) from cpn.txo where type = tax_type skip 10 limit 20
+    txa: SUM(ARRAY_SUM(amount, select amount from cpn.txa where type = tax_type limit 2)),
+    txo: SUM(ARRAY_SUM(amount, select amount from cpn.txo where type = tax_type skip 10 limit 10))
 }
 from (
     select {
@@ -9,7 +9,7 @@ from (
         cpnid : cpn.cpnid,
         tax_type: select type
             from cpn.txa
-            union all
+            union
             select type
             from cpn.txo
             union
@@ -17,7 +17,8 @@ from (
             from cpn.txf
     }
     from doc
-    unnest cpn
+    unnest cpn 
+    let a = lol + lil
     where id = 1
 )
 unnest tax_type
